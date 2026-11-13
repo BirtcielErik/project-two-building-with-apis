@@ -1,0 +1,351 @@
+<!doctype html>
+<!--
+  THROWAWAY PROTOTYPE: not production code.
+  Question: "How should the book detail page be laid out?" (grill-me Question 28)
+  Three structurally different layouts with identical features: status, rating,
+  finished date (one Save), notes add/delete, remove from shelf. State is in memory only.
+  Open directly in a browser. Use the switcher (bottom) or the left and right arrow keys.
+
+  DECISION (2026-11-12): Variant A (two columns). Left: sticky cover, title, author, year,
+  "on your shelf since", Open Library link, Remove from shelf. Right: "Your reading" card
+  (status button group, star rating with Clear, finished date with max=today, Save → "Saved ✓"),
+  then Notes (add box on top, newest first, delete with confirm). Stacks on phones.
+  Why: the detail page is the editing page, so controls stay one click away, and the sticky
+  cover keeps it feeling like a book page rather than a form.
+-->
+<html lang="en" data-theme="forest">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Book Detail Prototype</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5.0.0/daisyui.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5.0.0/themes.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.11/dist/index.global.js"></script>
+  <style>
+    #proto-switcher { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 1000;
+      background: #fff; color: #111; border: 2px dashed #111; border-radius: 6px; padding: 6px 10px;
+      font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; display: flex; gap: 8px; align-items: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,.4); max-width: calc(100vw - 24px); flex-wrap: wrap; justify-content: center; }
+    #proto-switcher button, #proto-switcher select { background: #111; color: #fff; border: 0; border-radius: 4px; padding: 2px 9px; cursor: pointer; font: inherit; }
+    #proto-switcher .state { color: #555; overflow-wrap: anywhere; }
+    body { padding-bottom: 110px; }
+  </style>
+</head>
+<body class="min-h-screen bg-base-100 text-base-content">
+
+  <div class="navbar bg-base-200 shadow-sm px-4">
+    <div class="flex-1"><a class="text-xl font-bold text-primary">One More Chapter</a></div>
+    <div class="hidden sm:flex gap-1">
+      <a class="btn btn-ghost btn-sm">Search</a>
+      <a class="btn btn-ghost btn-sm btn-active">My Shelf</a>
+      <a class="btn btn-ghost btn-sm">erik ▾</a>
+    </div>
+    <div class="sm:hidden"><button class="btn btn-ghost btn-sm">☰</button></div>
+  </div>
+
+  <main id="app"></main>
+
+  <dialog id="remove-modal" class="modal">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg">Remove from your shelf?</h3>
+      <p class="py-3 text-sm" id="remove-text"></p>
+      <div class="modal-action">
+        <form method="dialog"><button class="btn btn-ghost">Cancel</button></form>
+        <button class="btn btn-error" data-action="confirm-remove">Remove</button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
+
+  <div class="toast toast-top toast-end z-50" id="toasts"></div>
+
+  <div id="proto-switcher">
+    <strong>PROTOTYPE</strong>
+    <button id="prev" aria-label="Previous variant">←</button>
+    <span id="variant-label"></span>
+    <button id="next" aria-label="Next variant">→</button>
+    <select id="book-pick" aria-label="Sample book">
+      <option value="hobbit">Rich entry (The Hobbit)</option>
+      <option value="sparse">Sparse entry (no cover, no notes)</option>
+    </select>
+    <span class="state" id="state"></span>
+  </div>
+
+<script>
+// ---------- In-memory sample entries ----------
+const TODAY = "2026-11-12";
+const BOOKS = {
+  hobbit: {
+    id: 2, key: "OL27482W", title: "The Hobbit", authors: "J.R.R. Tolkien", year: 1937, cover: 14627509,
+    status: "finished", rating: 5, finished_on: "2026-03-14", added: "2026-01-05", updated: "2026-03-14",
+    notes: [
+      { id: 6, text: "Finished! The ending with Bilbo coming home to find his things being auctioned off is so funny and so sad at the same time.", at: "2026-03-14T21:40" },
+      { id: 5, text: "Thorin's change once they reach the treasure: the dragon-sickness idea is the heart of the book, I think.", at: "2026-03-09T22:05" },
+      { id: 4, text: "Riddles in the Dark is still the best chapter. \"What have I got in my pocket?\" is such a cheat, and that's the point.", at: "2026-02-21T20:12" },
+      { id: 3, text: "Mirkwood section drags a little but the spiders scene makes up for it.", at: "2026-02-28T19:30" },
+      { id: 2, text: "Love how the narrator talks directly to the reader. Feels like being read to.", at: "2026-01-11T08:50" },
+      { id: 1, text: "Starting this as a re-read before the book club picks the next one.", at: "2026-01-05T18:02" },
+    ],
+  },
+  sparse: {
+    id: 18, key: "OL0000001W", title: "A Field Guide to Texas Panhandle Birds", authors: "Unknown Author", year: 1994, cover: null,
+    status: "tbr", rating: null, finished_on: null, added: "2026-11-08", updated: "2026-11-08", notes: [],
+  },
+};
+let bookKey = "hobbit";
+const entry = () => BOOKS[bookKey];
+let nextNoteId = 100;
+
+const STATUS = {
+  tbr:      { label: "To Be Read",        short: "TBR",      badge: "badge-neutral" },
+  reading:  { label: "Currently Reading", short: "Reading",  badge: "badge-primary" },
+  finished: { label: "Finished",          short: "Finished", badge: "badge-success" },
+  dnf:      { label: "Did Not Finish",    short: "DNF",      badge: "badge-error badge-outline" },
+};
+
+// ---------- Helpers ----------
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmtDate = d => d ? new Date(d + "T00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+const fmtStamp = s => new Date(s).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+const stars = r => r === null ? `<span class="opacity-50 text-sm">Not rated</span>`
+  : `<span class="text-warning text-lg" title="${r} of 5">${"★".repeat(r)}<span class="text-base-content/25">${"★".repeat(5 - r)}</span></span>`;
+const badge = (s, size = "") => `<span class="badge ${STATUS[s].badge} ${size}">${STATUS[s].label}</span>`;
+function cover(e, size, cls) {
+  if (!e.cover) return `<div class="${cls} bg-base-300 flex flex-col items-center justify-center text-center p-3 gap-2">
+    <span class="text-4xl opacity-40">📖</span><span class="text-xs opacity-60">${esc(e.title)}</span></div>`;
+  return `<img class="${cls} object-cover bg-base-300" alt="Cover of ${esc(e.title)}" src="https://covers.openlibrary.org/b/id/${e.cover}-${size}.jpg">`;
+}
+const olLink = e => `<a class="link link-hover text-sm opacity-70" href="https://openlibrary.org/works/${e.key}" target="_blank" rel="noopener">View on Open Library ↗</a>`;
+
+// ---------- Shared building blocks (the same in every variant) ----------
+function editForm(e, { compact = false } = {}) {
+  const statusBtns = Object.entries(STATUS).map(([k, v]) =>
+    `<input class="join-item btn btn-sm ${compact ? "" : "sm:btn-md"}" type="radio" name="status" value="${k}" aria-label="${v.short}" ${e.status === k ? "checked" : ""}>`).join("");
+  const ratingInputs = `<input type="radio" name="rating" value="" class="rating-hidden" ${e.rating === null ? "checked" : ""}>` +
+    [1, 2, 3, 4, 5].map(n => `<input type="radio" name="rating" value="${n}" class="mask mask-star-2 bg-warning" aria-label="${n} star" ${e.rating === n ? "checked" : ""}>`).join("");
+  return `
+    <form id="edit-form" class="space-y-4" onsubmit="return false">
+      <fieldset class="space-y-1"><legend class="text-xs font-semibold uppercase tracking-wide opacity-60 mb-1">Status</legend>
+        <div class="join flex-wrap">${statusBtns}</div></fieldset>
+      <fieldset class="space-y-1"><legend class="text-xs font-semibold uppercase tracking-wide opacity-60 mb-1">Your rating</legend>
+        <div class="flex items-center gap-3"><div class="rating rating-md">${ratingInputs}</div>
+        <button type="button" class="btn btn-ghost btn-xs" data-action="clear-rating">Clear</button></div></fieldset>
+      <fieldset class="space-y-1"><legend class="text-xs font-semibold uppercase tracking-wide opacity-60 mb-1">Finished on <span class="normal-case font-normal">(optional)</span></legend>
+        <input type="date" name="finished_on" class="input input-bordered input-sm w-48" max="${TODAY}" value="${e.finished_on || ""}"></fieldset>
+      <div class="flex items-center gap-3">
+        <button type="button" class="btn btn-primary btn-sm" data-action="save">Save</button>
+        ${compact ? `<button type="button" class="btn btn-ghost btn-sm" data-action="cancel-edit">Cancel</button>` : ""}
+        <span id="saved-msg" class="text-success text-sm"></span>
+      </div>
+    </form>`;
+}
+function notesSection(e, { heading = true } = {}) {
+  const list = e.notes.length
+    ? `<ul class="space-y-3">${e.notes.slice().sort((a, b) => b.at.localeCompare(a.at)).map(n => `
+        <li class="bg-base-200 rounded-box p-4 group">
+          <p class="whitespace-pre-line">${esc(n.text)}</p>
+          <div class="flex items-center justify-between mt-2">
+            <span class="text-xs opacity-50">${fmtStamp(n.at)}</span>
+            <button class="btn btn-ghost btn-xs text-error opacity-60 group-hover:opacity-100" data-del-note="${n.id}">Delete</button>
+          </div></li>`).join("")}</ul>`
+    : `<div class="text-center py-8 opacity-60 bg-base-200 rounded-box"><p class="text-3xl">📝</p><p class="text-sm mt-1">No notes yet. Jot down your first thought above.</p></div>`;
+  return `
+    <section class="space-y-3">
+      ${heading ? `<h2 class="text-xl font-semibold">Notes <span class="opacity-50 text-base font-normal">(${e.notes.length})</span></h2>` : ""}
+      <div class="flex flex-col gap-2">
+        <textarea id="note-text" class="textarea textarea-bordered w-full" rows="3" placeholder="A thought, a quote, a question…"></textarea>
+        <div class="flex justify-end"><button class="btn btn-sm btn-primary btn-outline" data-action="add-note">Add note</button></div>
+      </div>
+      ${list}
+    </section>`;
+}
+const removeBtn = (cls = "") => `<button class="btn btn-ghost btn-sm text-error ${cls}" data-action="remove">Remove from shelf</button>`;
+const backLink = `<a class="link link-hover text-sm opacity-70">← Back to My Shelf</a>`;
+
+// ---------- Variant A: Two columns, sticky book info on the left ----------
+const A = {
+  name: "Two columns",
+  render: e => `
+    <div class="max-w-5xl mx-auto p-4 space-y-4">
+      ${backLink}
+      <div class="grid md:grid-cols-[260px_1fr] gap-8">
+        <aside class="md:sticky md:top-4 self-start space-y-3">
+          ${cover(e, "L", "w-40 md:w-full aspect-[2/3] rounded-lg shadow-lg mx-auto md:mx-0")}
+          <div class="text-center md:text-left space-y-1">
+            <h1 class="text-2xl font-bold leading-tight">${esc(e.title)}</h1>
+            <p class="opacity-80">${esc(e.authors)}</p>
+            <p class="text-sm opacity-50">First published ${e.year}</p>
+            <p class="text-xs opacity-50">On your shelf since ${fmtDate(e.added)}</p>
+            ${olLink(e)}
+          </div>
+          <div class="pt-2 text-center md:text-left">${removeBtn()}</div>
+        </aside>
+        <div class="space-y-8 min-w-0">
+          <section class="card bg-base-200"><div class="card-body">
+            <h2 class="card-title">Your reading</h2>${editForm(e)}</div></section>
+          ${notesSection(e)}
+        </div>
+      </div>
+    </div>`,
+};
+
+// ---------- Variant B: Header band + tabs ----------
+let bTab = "notes";
+const B = {
+  name: "Header + tabs",
+  render: e => `
+    <div class="bg-base-200 border-b border-base-300">
+      <div class="max-w-4xl mx-auto p-4 space-y-3">
+        ${backLink}
+        <div class="flex gap-5 items-end">
+          ${cover(e, "M", "w-24 sm:w-28 aspect-[2/3] rounded shadow-md shrink-0")}
+          <div class="space-y-1 min-w-0 pb-1">
+            <h1 class="text-2xl sm:text-3xl font-bold leading-tight">${esc(e.title)}</h1>
+            <p class="opacity-80">${esc(e.authors)} <span class="opacity-50">· ${e.year}</span></p>
+            <div class="flex flex-wrap items-center gap-3">${badge(e.status)} ${stars(e.rating)}
+              ${e.finished_on ? `<span class="text-xs opacity-60">Finished ${fmtDate(e.finished_on)}</span>` : ""}</div>
+          </div>
+        </div>
+        <div role="tablist" class="tabs tabs-border">
+          <button role="tab" class="tab ${bTab === "notes" ? "tab-active" : ""}" data-tab="notes">Notes (${e.notes.length})</button>
+          <button role="tab" class="tab ${bTab === "edit" ? "tab-active" : ""}" data-tab="edit">Details &amp; edit</button>
+        </div>
+      </div>
+    </div>
+    <div class="max-w-4xl mx-auto p-4">
+      ${bTab === "notes" ? notesSection(e, { heading: false }) : `
+        <div class="grid sm:grid-cols-2 gap-8">
+          <div>${editForm(e)}</div>
+          <div class="space-y-2 text-sm">
+            <h3 class="text-xs font-semibold uppercase tracking-wide opacity-60">About this book</h3>
+            <p>Added to your shelf ${fmtDate(e.added)}</p><p>Last updated ${fmtDate(e.updated)}</p>
+            <p>Open Library ID <code class="text-xs">${e.key}</code></p>${olLink(e)}
+            <div class="divider"></div>${removeBtn("px-0")}
+          </div>
+        </div>`}
+    </div>`,
+};
+
+// ---------- Variant C: Display-first, click Edit to swap in the form ----------
+let cEditing = false;
+const C = {
+  name: "Display, click to edit",
+  render: e => `
+    <div class="max-w-3xl mx-auto p-4 space-y-6">
+      ${backLink}
+      <div class="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
+        ${cover(e, "L", "w-44 aspect-[2/3] rounded-lg shadow-lg shrink-0")}
+        <div class="flex-1 min-w-0 space-y-4 w-full">
+          <div class="text-center sm:text-left">
+            <h1 class="text-3xl font-bold leading-tight">${esc(e.title)}</h1>
+            <p class="text-lg opacity-80">${esc(e.authors)}</p>
+            <p class="text-sm opacity-50">First published ${e.year} · ${olLink(e)}</p>
+          </div>
+          <div id="reading-box" class="border border-base-300 rounded-box p-4">
+            ${cEditing ? editForm(e, { compact: true }) : `
+              <div class="flex items-start justify-between gap-3">
+                <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm items-center">
+                  <dt class="opacity-60">Status</dt><dd>${badge(e.status)}</dd>
+                  <dt class="opacity-60">Rating</dt><dd>${stars(e.rating)}</dd>
+                  <dt class="opacity-60">Finished</dt><dd>${fmtDate(e.finished_on) || '<span class="opacity-40">—</span>'}</dd>
+                  <dt class="opacity-60">Added</dt><dd>${fmtDate(e.added)}</dd>
+                </dl>
+                <button class="btn btn-sm btn-outline" data-action="start-edit">✎ Edit</button>
+              </div>`}
+          </div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      ${notesSection(e)}
+      <div class="pt-6 border-t border-base-300 flex justify-end">${removeBtn()}</div>
+    </div>`,
+};
+
+// ---------- Wiring ----------
+const VARIANTS = [["A", A], ["B", B], ["C", C]];
+let current = 0;
+try { const s = +localStorage.getItem("omc-detail-variant"); if (s >= 0 && s < VARIANTS.length) current = s; } catch (err) {}
+
+const app = document.getElementById("app");
+function render() {
+  const [k, v] = VARIANTS[current];
+  document.getElementById("variant-label").textContent = `${k} · ${v.name} (${current + 1}/${VARIANTS.length})`;
+  app.innerHTML = v.render(entry());
+  const e = entry();
+  document.getElementById("state").textContent =
+    `status=${e.status} rating=${e.rating ?? "null"} finished_on=${e.finished_on ?? "null"} notes=${e.notes.length}`;
+  try { localStorage.setItem("omc-detail-variant", current); } catch (err) {}
+}
+function toast(msg, kind = "alert-info") {
+  const t = document.createElement("div");
+  t.className = `alert ${kind} text-sm`;
+  t.textContent = msg;
+  document.getElementById("toasts").appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+document.addEventListener("click", ev => {
+  const t = ev.target.closest("[data-action],[data-del-note],[data-tab]");
+  if (!t) return;
+  const e = entry();
+  if (t.dataset.tab) { bTab = t.dataset.tab; render(); return; }
+  if (t.dataset.delNote) {
+    if (confirm("Delete this note?")) {                      // same native dialog hx-confirm uses
+      e.notes = e.notes.filter(n => n.id !== +t.dataset.delNote);
+      render(); toast("Note deleted.");
+    }
+    return;
+  }
+  switch (t.dataset.action) {
+    case "clear-rating": document.querySelector('#edit-form input[name="rating"][value=""]').checked = true; break;
+    case "save": {
+      const f = document.getElementById("edit-form");
+      const fin = f.finished_on.value || null;
+      if (fin && fin > TODAY) { toast("Finished date can't be in the future.", "alert-error"); return; }
+      e.status = f.querySelector('input[name="status"]:checked').value;
+      const r = f.querySelector('input[name="rating"]:checked').value;
+      e.rating = r === "" ? null : +r;
+      e.finished_on = fin;
+      e.updated = TODAY;
+      cEditing = false;
+      render();
+      const msg = document.getElementById("saved-msg");
+      if (msg) { msg.textContent = "Saved ✓"; setTimeout(() => { msg.textContent = ""; }, 2000); }
+      else toast("Saved ✓", "alert-success");
+      break;
+    }
+    case "start-edit": cEditing = true; render(); break;
+    case "cancel-edit": cEditing = false; render(); break;
+    case "add-note": {
+      const ta = document.getElementById("note-text");
+      if (!ta.value.trim()) { ta.classList.add("textarea-error"); ta.focus(); return; }
+      e.notes.push({ id: nextNoteId++, text: ta.value.trim(), at: new Date().toISOString().slice(0, 16) });
+      render(); toast("Note added.", "alert-success");
+      break;
+    }
+    case "remove":
+      document.getElementById("remove-text").textContent =
+        `"${e.title}" and its ${e.notes.length} note${e.notes.length === 1 ? "" : "s"} will be permanently deleted.`;
+      document.getElementById("remove-modal").showModal();
+      break;
+    case "confirm-remove":
+      document.getElementById("remove-modal").close();
+      toast(`Would redirect to /shelf/ with "Removed ${e.title} from your shelf."`);
+      break;
+  }
+});
+
+const go = d => { current = (current + d + VARIANTS.length) % VARIANTS.length; cEditing = false; render(); };
+document.getElementById("prev").onclick = () => go(-1);
+document.getElementById("next").onclick = () => go(1);
+document.getElementById("book-pick").onchange = ev => { bookKey = ev.target.value; cEditing = false; render(); };
+document.addEventListener("keydown", ev => {
+  if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+  if (ev.key === "ArrowLeft") go(-1);
+  if (ev.key === "ArrowRight") go(1);
+});
+
+render();
+</script>
+</body>
+</html>

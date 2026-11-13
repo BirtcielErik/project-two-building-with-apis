@@ -1,0 +1,395 @@
+<!doctype html>
+<!--
+  THROWAWAY PROTOTYPE: not production code.
+  Question: "What should the My Shelf page look like?" (grill-me Question 27)
+  Three structurally different layouts over the same in-memory data.
+  Open this file directly in a browser. Use the switcher (bottom) or the left and right arrow keys.
+
+  DECISION (2026-11-12): Variant C (sidebar filters + rich list rows) plus Variant A's
+  "Currently Reading" strip above the search/sort bar, hidden while any filter is active.
+  Why: list rows show the most per book (year, finished date, added date, notes count),
+  the sidebar keeps every filter visible at once on desktop, and the strip adds a personal
+  touch cheaply.
+-->
+<html lang="en" data-theme="forest">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Shelf Prototype</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5.0.0/daisyui.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5.0.0/themes.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.11/dist/index.global.js"></script>
+  <style>
+    /* Prototype switcher: deliberately NOT DaisyUI so it reads as separate from the design. */
+    #proto-switcher { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 1000;
+      background: #fff; color: #111; border: 2px dashed #111; border-radius: 6px; padding: 6px 10px;
+      font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; display: flex; gap: 8px; align-items: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,.4); max-width: calc(100vw - 24px); flex-wrap: wrap; justify-content: center; }
+    #proto-switcher button { background: #111; color: #fff; border: 0; border-radius: 4px; padding: 2px 9px; cursor: pointer; font: inherit; }
+    #proto-switcher .url { color: #555; overflow-wrap: anywhere; }
+    body { padding-bottom: 90px; }
+  </style>
+</head>
+<body class="min-h-screen bg-base-100 text-base-content">
+
+  <!-- Shared shell (decided in Q26): constant across variants -->
+  <div class="navbar bg-base-200 shadow-sm px-4">
+    <div class="flex-1"><a class="text-xl font-bold text-primary">One More Chapter</a></div>
+    <div class="hidden sm:flex gap-1">
+      <a class="btn btn-ghost btn-sm">Search</a>
+      <a class="btn btn-ghost btn-sm btn-active">My Shelf</a>
+      <div class="dropdown dropdown-end">
+        <div tabindex="0" role="button" class="btn btn-ghost btn-sm">erik ▾</div>
+        <ul tabindex="0" class="dropdown-content menu bg-base-200 rounded-box z-10 w-40 p-2 shadow">
+          <li><a>Profile</a></li><li><a>Log out</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="sm:hidden"><button class="btn btn-ghost btn-sm">☰</button></div>
+  </div>
+
+  <main id="app"></main>
+
+  <div class="toast toast-top toast-end z-50" id="toasts"></div>
+
+  <div id="proto-switcher">
+    <strong>PROTOTYPE</strong>
+    <button id="prev" aria-label="Previous variant">←</button>
+    <span id="variant-label"></span>
+    <button id="next" aria-label="Next variant">→</button>
+    <span class="url" id="url-state"></span>
+  </div>
+
+<script>
+// ---------- Data (real Open Library work keys and cover IDs, fetched 2026-11-12) ----------
+const ENTRIES = [
+  { id: 1,  key: "OL21745884W", title: "Project Hail Mary", authors: "Andy Weir", year: 2021, cover: 11200092, status: "reading",  rating: null, finished: null,         added: "2026-10-28", updated: "2026-11-10", notes: 3 },
+  { id: 2,  key: "OL27482W",    title: "The Hobbit", authors: "J.R.R. Tolkien", year: 1937, cover: 14627509, status: "finished", rating: 5,    finished: "2026-03-14", added: "2026-01-05", updated: "2026-03-14", notes: 6 },
+  { id: 3,  key: "OL893414W",   title: "Dune", authors: "Frank Herbert", year: 1965, cover: 11481354, status: "finished", rating: 4,    finished: "2026-06-02", added: "2026-04-11", updated: "2026-06-03", notes: 2 },
+  { id: 4,  key: "OL8479867W",  title: "The Name of the Wind", authors: "Patrick Rothfuss", year: 2007, cover: 11480483, status: "reading",  rating: null, finished: null,         added: "2026-09-19", updated: "2026-11-02", notes: 1 },
+  { id: 5,  key: "OL18012166W", title: "Circe", authors: "Madeline Miller", year: 2018, cover: 8739376,  status: "tbr",      rating: null, finished: null,         added: "2026-11-01", updated: "2026-11-01", notes: 0 },
+  { id: 6,  key: "OL17091839W", title: "The Martian", authors: "Andy Weir", year: 2011, cover: 11447888, status: "finished", rating: 5,    finished: "2025-12-20", added: "2025-12-01", updated: "2025-12-20", notes: 0 },
+  { id: 7,  key: "OL18139176W", title: "Educated", authors: "Tara Westover", year: 2018, cover: 8314077,  status: "finished", rating: 4,    finished: "2026-02-08", added: "2026-01-20", updated: "2026-02-09", notes: 4 },
+  { id: 8,  key: "OL20893680W", title: "Piranesi", authors: "Susanna Clarke", year: 2020, cover: 10226290, status: "tbr",      rating: null, finished: null,         added: "2026-10-15", updated: "2026-10-15", notes: 0 },
+  { id: 9,  key: "OL16086747W", title: "The Night Circus", authors: "Erin Morgenstern", year: 2011, cover: 8773134,  status: "dnf",      rating: 2,    finished: "2026-05-10", added: "2026-04-30", updated: "2026-05-10", notes: 1 },
+  { id: 10, key: "OL5738148W",  title: "The Final Empire", authors: "Brandon Sanderson", year: 2001, cover: 14658160, status: "tbr",      rating: null, finished: null,         added: "2026-08-22", updated: "2026-08-22", notes: 0 },
+  { id: 11, key: "OL20883297W", title: "Klara and the Sun", authors: "Kazuo Ishiguro", year: 2019, cover: 10648686, status: "finished", rating: 3,    finished: "2026-07-18", added: "2026-07-01", updated: "2026-07-18", notes: 2 },
+  { id: 12, key: "OL19096402W", title: "The Silent Patient", authors: "Alex Michaelides", year: 2018, cover: 9407338,  status: "finished", rating: 4,    finished: "2026-08-05", added: "2026-07-29", updated: "2026-08-05", notes: 0 },
+  { id: 13, key: "OL17930368W", title: "Atomic Habits", authors: "James Clear", year: 2016, cover: 12539702, status: "dnf",      rating: null, finished: null,         added: "2026-02-14", updated: "2026-03-01", notes: 0 },
+  { id: 14, key: "OL17202418W", title: "Station Eleven", authors: "Emily St. John Mandel", year: 2014, cover: 7369961,  status: "tbr",      rating: null, finished: null,         added: "2026-09-02", updated: "2026-09-02", notes: 0 },
+  { id: 15, key: "OL17370186W", title: "A Little Life", authors: "Hanya Yanagihara", year: 2008, cover: 12065783, status: "tbr",      rating: null, finished: null,         added: "2026-06-21", updated: "2026-06-21", notes: 0 },
+  { id: 16, key: "OL20965973W", title: "The Midnight Library", authors: "Matt Haig", year: 2020, cover: 10313767, status: "finished", rating: 3,    finished: "2026-09-27", added: "2026-09-10", updated: "2026-09-28", notes: 1 },
+  { id: 17, key: "OL10535269W", title: "Gardening for Beginners", authors: "Violet Stevenson", year: 1977, cover: 13099371, status: "reading",  rating: 4,    finished: null,         added: "2026-10-03", updated: "2026-11-11", notes: 5 },
+  { id: 18, key: "OL0000001W",  title: "A Field Guide to Texas Panhandle Birds", authors: "Unknown Author", year: 1994, cover: null, status: "tbr", rating: null, finished: null, added: "2026-11-08", updated: "2026-11-08", notes: 0 },
+  { id: 19, key: "OL0000002W",  title: "Collected Short Stories, Volume II", authors: "Various", year: 1962, cover: null, status: "finished", rating: 4, finished: "2026-01-30", added: "2026-01-02", updated: "2026-01-30", notes: 1 },
+];
+
+const STATUS = {
+  tbr:      { label: "To Be Read",        short: "TBR",      badge: "badge-neutral" },
+  reading:  { label: "Currently Reading", short: "Reading",  badge: "badge-primary" },
+  finished: { label: "Finished",          short: "Finished", badge: "badge-success" },
+  dnf:      { label: "Did Not Finish",    short: "DNF",      badge: "badge-error badge-outline" },
+};
+const SORTS = [
+  ["-added", "Recently added"], ["added", "Oldest added"],
+  ["title", "Title A→Z"], ["-title", "Title Z→A"],
+  ["authors", "Author A→Z"], ["-authors", "Author Z→A"],
+  ["-rating", "Highest rated"], ["rating", "Lowest rated"],
+  ["-finished", "Recently finished"], ["-updated", "Recently updated"],
+];
+const PAGE_SIZE = 12;
+
+// ---------- Shared state + query logic (stands in for django-filter) ----------
+const DEFAULTS = { q: "", status: "all", min_rating: "", rated: "", sort: "-added", page: 1 };
+const state = { ...DEFAULTS };
+
+function filtered() {
+  const q = state.q.trim().toLowerCase();
+  let rows = ENTRIES.filter(e =>
+    (!q || e.title.toLowerCase().includes(q) || e.authors.toLowerCase().includes(q)) &&
+    (state.status === "all" || e.status === state.status) &&
+    (!state.min_rating || (e.rating !== null && e.rating >= +state.min_rating)) &&
+    (!state.rated || (state.rated === "yes" ? e.rating !== null : e.rating === null))
+  );
+  const desc = state.sort.startsWith("-"), field = state.sort.replace("-", "");
+  rows.sort((a, b) => {
+    const av = a[field], bv = b[field];
+    if (av === null && bv === null) return 0;
+    if (av === null) return 1;          // nulls last regardless of direction
+    if (bv === null) return -1;
+    const c = typeof av === "string" ? av.localeCompare(bv) : av - bv;
+    return desc ? -c : c;
+  });
+  return rows;
+}
+function paged(rows) {
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  if (state.page > pages) state.page = pages;
+  const start = (state.page - 1) * PAGE_SIZE;
+  return { slice: rows.slice(start, start + PAGE_SIZE), pages, start, total: rows.length };
+}
+function filtersActive() { return state.q || state.status !== "all" || state.min_rating || state.rated; }
+function queryString() {
+  const p = Object.entries(state).filter(([k, v]) => String(v) !== String(DEFAULTS[k]));
+  return "/shelf/" + (p.length ? "?" + p.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&") : "");
+}
+
+// ---------- Small render helpers ----------
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = d => d ? new Date(d + "T00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+const stars = (r, cls = "") => r === null
+  ? `<span class="text-base-content/40 text-xs ${cls}">Not rated</span>`
+  : `<span class="text-warning tracking-tight ${cls}" title="${r} of 5">${"★".repeat(r)}<span class="text-base-content/25">${"★".repeat(5 - r)}</span></span>`;
+const badge = (s, size = "badge-sm") => `<span class="badge ${STATUS[s].badge} ${size} whitespace-nowrap">${STATUS[s].short}</span>`;
+// Placeholder shown when a book has no cover_id, or the cover image fails to load.
+function placeholder(title) {
+  return `<div class="w-full h-full bg-base-300 flex flex-col items-center justify-center text-center p-2 gap-1">
+      <span class="text-2xl opacity-40">📖</span><span class="text-[10px] leading-tight opacity-60 line-clamp-3">${esc(title)}</span></div>`;
+}
+function cover(e, size = "M", cls = "") {
+  if (!e.cover) return `<div class="${cls} overflow-hidden">${placeholder(e.title)}</div>`;
+  return `<div class="${cls} overflow-hidden bg-base-300"><img loading="lazy" class="w-full h-full object-cover" alt="Cover of ${esc(e.title)}"
+      src="https://covers.openlibrary.org/b/id/${e.cover}-${size}.jpg" data-fallback="${e.id}"></div>`;
+}
+// Image errors don't bubble, so listen in the capture phase.
+document.addEventListener("error", ev => {
+  const img = ev.target;
+  if (img.tagName === "IMG" && img.dataset.fallback) {
+    img.parentElement.innerHTML = placeholder(ENTRIES.find(x => x.id === +img.dataset.fallback).title);
+  }
+}, true);
+function pagination(p) {
+  if (p.pages <= 1) return "";
+  let btns = `<button class="join-item btn btn-sm" data-page="${state.page - 1}" ${state.page === 1 ? "disabled" : ""}>«</button>`;
+  for (let i = 1; i <= p.pages; i++) btns += `<button class="join-item btn btn-sm ${i === state.page ? "btn-active btn-primary" : ""}" data-page="${i}">${i}</button>`;
+  btns += `<button class="join-item btn btn-sm" data-page="${state.page + 1}" ${state.page === p.pages ? "disabled" : ""}>»</button>`;
+  return `<div class="flex justify-center pt-2"><div class="join">${btns}</div></div>`;
+}
+const countLine = p => p.total
+  ? `<p class="text-sm text-base-content/60">Showing ${p.start + 1}–${Math.min(p.start + PAGE_SIZE, p.total)} of ${p.total}</p>`
+  : "";
+function empty() {
+  return `<div class="text-center py-16 space-y-3 bg-base-200 rounded-box">
+    <p class="text-4xl">🔍</p><p class="font-semibold">No books match these filters.</p>
+    <button class="btn btn-sm btn-ghost" data-action="clear">Clear filters</button></div>`;
+}
+const opts = (list, val) => list.map(([v, l]) => `<option value="${v}" ${String(v) === String(val) ? "selected" : ""}>${l}</option>`).join("");
+const RATING_OPTS = [["", "Any rating"], ["5", "★★★★★ only"], ["4", "4★ and up"], ["3", "3★ and up"], ["2", "2★ and up"], ["1", "1★ and up"]];
+const RATED_OPTS = [["", "Rated or not"], ["yes", "Rated"], ["no", "Not rated"]];
+
+// ---------- Variant A: Cover grid + status tabs + Currently Reading strip ----------
+const A = {
+  name: "Cover grid",
+  shell: () => `
+    <div class="max-w-7xl mx-auto p-4 space-y-5">
+      <h1 class="text-3xl font-bold">My Shelf</h1>
+      <div id="strip"></div>
+      <div id="tabs"></div>
+      <div class="flex flex-col md:flex-row gap-2">
+        <label class="input input-bordered w-full md:flex-1"><span class="opacity-50">⌕</span>
+          <input type="search" placeholder="Search title or author…" data-bind="q" value="${esc(state.q)}"></label>
+        <select class="select select-bordered md:w-40" data-bind="min_rating">${opts(RATING_OPTS, state.min_rating)}</select>
+        <select class="select select-bordered md:w-40" data-bind="rated">${opts(RATED_OPTS, state.rated)}</select>
+        <select class="select select-bordered md:w-48" data-bind="sort">${opts(SORTS, state.sort)}</select>
+      </div>
+      <div id="results"></div>
+    </div>`,
+  results() {
+    const reading = ENTRIES.filter(e => e.status === "reading");
+    document.getElementById("strip").innerHTML = filtersActive() || !reading.length ? "" : `
+      <section class="bg-base-200 rounded-box p-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-primary mb-3">Currently Reading</h2>
+        <div class="flex gap-4 overflow-x-auto pb-1">${reading.map(e => `
+          <a class="flex gap-3 items-center min-w-60 cursor-pointer hover:bg-base-300 rounded-lg p-1" data-open="${e.id}">
+            ${cover(e, "S", "w-12 h-18 rounded shrink-0")}
+            <div class="min-w-0"><p class="font-semibold truncate">${esc(e.title)}</p><p class="text-xs opacity-60 truncate">${esc(e.authors)}</p>
+            <p class="text-xs opacity-50">${e.notes} note${e.notes === 1 ? "" : "s"}</p></div></a>`).join("")}
+        </div></section>`;
+    const count = s => ENTRIES.filter(e => s === "all" || e.status === s).length;
+    document.getElementById("tabs").innerHTML = `
+      <div role="tablist" class="tabs tabs-box overflow-x-auto flex-nowrap">${[["all", "All"], ...Object.entries(STATUS).map(([k, v]) => [k, v.short])].map(([k, l]) =>
+        `<button role="tab" class="tab whitespace-nowrap ${state.status === k ? "tab-active" : ""}" data-status="${k}">${l}<span class="ml-1 opacity-50">${count(k)}</span></button>`).join("")}
+      </div>`;
+    const p = paged(filtered());
+    document.getElementById("results").innerHTML = !p.total ? empty() : `
+      <div class="space-y-4">${countLine(p)}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">${p.slice.map(e => `
+          <a class="card bg-base-200 hover:bg-base-300 transition cursor-pointer shadow-sm" data-open="${e.id}">
+            <figure class="relative">${cover(e, "M", "w-full aspect-[2/3]")}
+              <div class="absolute top-2 left-2">${badge(e.status)}</div></figure>
+            <div class="card-body p-3 gap-1">
+              <h3 class="font-semibold leading-tight line-clamp-2">${esc(e.title)}</h3>
+              <p class="text-xs opacity-60 truncate">${esc(e.authors)}</p>
+              <div class="text-sm">${stars(e.rating)}</div>
+            </div></a>`).join("")}
+        </div>${pagination(p)}</div>`;
+  },
+};
+
+// ---------- Variant B: Dense table with sortable column headers ----------
+const B = {
+  name: "Sortable table",
+  shell: () => `
+    <div class="max-w-6xl mx-auto p-4 space-y-4">
+      <div class="flex flex-wrap items-end justify-between gap-2">
+        <h1 class="text-2xl font-bold">My Shelf</h1>
+        <div id="summary" class="text-sm opacity-70"></div>
+      </div>
+      <div class="flex flex-col sm:flex-row gap-2 bg-base-200 p-3 rounded-box">
+        <input type="search" class="input input-bordered input-sm w-full sm:flex-1" placeholder="Filter by title or author" data-bind="q" value="${esc(state.q)}">
+        <select class="select select-bordered select-sm sm:w-44" data-bind="status">${opts([["all", "All statuses"], ...Object.entries(STATUS).map(([k, v]) => [k, v.label])], state.status)}</select>
+        <select class="select select-bordered select-sm sm:w-36" data-bind="min_rating">${opts(RATING_OPTS, state.min_rating)}</select>
+        <select class="select select-bordered select-sm sm:w-36" data-bind="rated">${opts(RATED_OPTS, state.rated)}</select>
+      </div>
+      <div id="results"></div>
+    </div>`,
+  results() {
+    const counts = Object.entries(STATUS).map(([k, v]) => `${ENTRIES.filter(e => e.status === k).length} ${v.short}`).join(" · ");
+    document.getElementById("summary").textContent = `${ENTRIES.length} books · ${counts}`;
+    const p = paged(filtered());
+    const field = state.sort.replace("-", ""), desc = state.sort.startsWith("-");
+    const th = (f, label, cls = "") => `<th class="${cls}"><button class="flex items-center gap-1 hover:text-primary ${field === f ? "text-primary" : ""}" data-sortcol="${f}">
+        ${label}<span class="text-xs">${field === f ? (desc ? "▼" : "▲") : "↕"}</span></button></th>`;
+    document.getElementById("results").innerHTML = !p.total ? empty() : `
+      <div class="overflow-x-auto rounded-box border border-base-300">
+        <table class="table table-sm table-zebra">
+          <thead><tr><th class="w-10"></th>${th("title", "Title")}${th("authors", "Author", "hidden sm:table-cell")}<th>Status</th>
+            ${th("rating", "Rating", "hidden sm:table-cell")}${th("finished", "Finished", "hidden md:table-cell")}${th("added", "Added", "hidden lg:table-cell")}
+            <th class="hidden lg:table-cell text-right">Notes</th></tr></thead>
+          <tbody>${p.slice.map(e => `
+            <tr class="hover:bg-base-300 cursor-pointer" data-open="${e.id}">
+              <td>${cover(e, "S", "w-8 h-12 rounded")}</td>
+              <td><div class="font-medium">${esc(e.title)}</div><div class="text-xs opacity-60 sm:hidden">${esc(e.authors)}</div>
+                  <div class="sm:hidden mt-0.5">${stars(e.rating, "text-xs")}</div></td>
+              <td class="hidden sm:table-cell">${esc(e.authors)}</td>
+              <td>${badge(e.status)}</td>
+              <td class="hidden sm:table-cell">${stars(e.rating)}</td>
+              <td class="hidden md:table-cell whitespace-nowrap">${fmt(e.finished) || '<span class="opacity-30">—</span>'}</td>
+              <td class="hidden lg:table-cell whitespace-nowrap">${fmt(e.added)}</td>
+              <td class="hidden lg:table-cell text-right">${e.notes || '<span class="opacity-30">0</span>'}</td>
+            </tr>`).join("")}</tbody>
+        </table></div>
+      <div class="flex flex-wrap items-center justify-between gap-2 mt-3">${countLine(p)}${pagination(p)}</div>`;
+  },
+};
+
+// ---------- Variant C: Sidebar filters + rich list rows ----------
+const C = {
+  name: "Sidebar + list",
+  shell: () => `
+    <div class="max-w-6xl mx-auto p-4">
+      <div class="flex items-center justify-between mb-4">
+        <h1 class="text-3xl font-bold">My Shelf</h1>
+        <button class="btn btn-sm btn-outline lg:hidden" data-action="filters">Filters</button>
+      </div>
+      <div class="grid lg:grid-cols-[240px_1fr] gap-6">
+        <aside id="filters" class="hidden lg:block space-y-6 bg-base-200 lg:bg-transparent rounded-box p-4 lg:p-0">
+          <div><h3 class="text-xs font-semibold uppercase tracking-wide opacity-60 mb-2">Status</h3>
+            <ul class="menu menu-sm p-0 w-full" id="status-menu"></ul></div>
+          <div><h3 class="text-xs font-semibold uppercase tracking-wide opacity-60 mb-2">Rating</h3>
+            <div class="space-y-1">${RATING_OPTS.map(([v, l]) => `<label class="flex gap-2 items-center cursor-pointer text-sm">
+              <input type="radio" name="minr" class="radio radio-xs radio-primary" data-bind="min_rating" value="${v}" ${state.min_rating === v ? "checked" : ""}>${l}</label>`).join("")}</div></div>
+          <div><h3 class="text-xs font-semibold uppercase tracking-wide opacity-60 mb-2">Show</h3>
+            <div class="space-y-1">${RATED_OPTS.map(([v, l]) => `<label class="flex gap-2 items-center cursor-pointer text-sm">
+              <input type="radio" name="rated" class="radio radio-xs radio-primary" data-bind="rated" value="${v}" ${state.rated === v ? "checked" : ""}>${l}</label>`).join("")}</div></div>
+          <button class="btn btn-ghost btn-xs" data-action="clear">Clear all filters</button>
+        </aside>
+        <section class="space-y-3 min-w-0">
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input type="search" class="input input-bordered w-full sm:flex-1" placeholder="Search your shelf…" data-bind="q" value="${esc(state.q)}">
+            <select class="select select-bordered sm:w-52" data-bind="sort">${opts(SORTS, state.sort)}</select>
+          </div>
+          <div id="results"></div>
+        </section>
+      </div>
+    </div>`,
+  results() {
+    const count = s => ENTRIES.filter(e => s === "all" || e.status === s).length;
+    document.getElementById("status-menu").innerHTML = [["all", "All books"], ...Object.entries(STATUS).map(([k, v]) => [k, v.label])].map(([k, l]) =>
+      `<li><a class="${state.status === k ? "menu-active" : ""} flex justify-between" data-status="${k}">${l}<span class="badge badge-sm badge-ghost">${count(k)}</span></a></li>`).join("");
+    const p = paged(filtered());
+    document.getElementById("results").innerHTML = !p.total ? empty() : `
+      ${countLine(p)}
+      <ul class="divide-y divide-base-300 bg-base-200 rounded-box">${p.slice.map(e => `
+        <li class="flex gap-4 p-3 hover:bg-base-300 cursor-pointer first:rounded-t-box last:rounded-b-box" data-open="${e.id}">
+          ${cover(e, "M", "w-16 h-24 sm:w-20 sm:h-30 rounded shrink-0")}
+          <div class="flex-1 min-w-0 space-y-1">
+            <div class="flex flex-wrap items-start justify-between gap-x-3">
+              <div class="min-w-0"><h3 class="font-semibold text-lg leading-tight">${esc(e.title)}</h3>
+                <p class="text-sm opacity-70">${esc(e.authors)} <span class="opacity-50">· ${e.year}</span></p></div>
+              ${badge(e.status, "badge-md")}
+            </div>
+            <div>${stars(e.rating)}</div>
+            <div class="flex flex-wrap gap-x-4 text-xs opacity-60">
+              ${e.finished ? `<span>Finished ${fmt(e.finished)}</span>` : ""}
+              <span>Added ${fmt(e.added)}</span>
+              <span>📝 ${e.notes} note${e.notes === 1 ? "" : "s"}</span>
+            </div>
+          </div>
+        </li>`).join("")}</ul>
+      ${pagination(p)}`;
+  },
+};
+
+// ---------- Wiring ----------
+const VARIANTS = [["A", A], ["B", B], ["C", C]];
+let current = 0;
+try { const saved = +localStorage.getItem("omc-shelf-variant"); if (saved >= 0 && saved < VARIANTS.length) current = saved; } catch (e) {}
+
+const app = document.getElementById("app");
+function renderAll() {
+  const [k, v] = VARIANTS[current];
+  document.getElementById("variant-label").textContent = `${k} · ${v.name} (${current + 1}/${VARIANTS.length})`;
+  app.innerHTML = v.shell();
+  update();
+  try { localStorage.setItem("omc-shelf-variant", current); } catch (e) {}
+}
+function update() {
+  VARIANTS[current][1].results();
+  document.getElementById("url-state").textContent = "→ " + queryString();
+}
+function toast(msg) {
+  const t = document.createElement("div");
+  t.className = "alert alert-info text-sm";
+  t.textContent = msg;
+  document.getElementById("toasts").appendChild(t);
+  setTimeout(() => t.remove(), 2200);
+}
+
+app.addEventListener("input", e => {
+  const k = e.target.dataset.bind; if (!k) return;
+  state[k] = e.target.value; state.page = 1; update();
+});
+app.addEventListener("change", e => {   // selects and radios
+  const k = e.target.dataset.bind; if (!k || e.target.type === "search") return;
+  state[k] = e.target.value; state.page = 1; update();
+});
+app.addEventListener("click", e => {
+  const t = e.target.closest("[data-status],[data-page],[data-sortcol],[data-open],[data-action]");
+  if (!t) return;
+  if (t.dataset.status) { state.status = t.dataset.status; state.page = 1; }
+  else if (t.dataset.page) { state.page = +t.dataset.page; window.scrollTo({ top: 0, behavior: "smooth" }); }
+  else if (t.dataset.sortcol) {
+    const f = t.dataset.sortcol;
+    state.sort = state.sort === f ? "-" + f : state.sort === "-" + f ? f : (["title", "authors"].includes(f) ? f : "-" + f);
+    state.page = 1;
+  }
+  else if (t.dataset.open) { const en = ENTRIES.find(x => x.id === +t.dataset.open); toast(`Would open /shelf/${en.id}/ (${en.title})`); return; }
+  else if (t.dataset.action === "clear") { Object.assign(state, DEFAULTS); renderAll(); return; }
+  else if (t.dataset.action === "filters") { document.getElementById("filters").classList.toggle("hidden"); return; }
+  update();
+});
+
+const go = d => { current = (current + d + VARIANTS.length) % VARIANTS.length; renderAll(); };
+document.getElementById("prev").onclick = () => go(-1);
+document.getElementById("next").onclick = () => go(1);
+document.addEventListener("keydown", e => {
+  if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+  if (e.key === "ArrowLeft") go(-1);
+  if (e.key === "ArrowRight") go(1);
+});
+
+renderAll();
+</script>
+</body>
+</html>

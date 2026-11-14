@@ -9,6 +9,12 @@ A Django web app and REST API for keeping a personal bookshelf of Open Library b
 - Lint/format: Ruff · Tests: Pytest (pytest-django, `responses`)
 - UI: Tailwind CSS + DaisyUI (Forest theme) via `django-tailwind-cli` (no Node.js), HTMX vendored at a pinned version (no CDN)
 
+## Commands
+
+- Dev server + CSS rebuild: `uv run --env-file .env python manage.py tailwind runserver`
+- Build CSS: `uv run --env-file .env python manage.py tailwind build` (`assets/css/tailwind.css` is generated and git-ignored)
+- Test: `uv run pytest` (no `.env` needed) · Lint: `uv run ruff check .` · Format: `uv run ruff format --check .`
+
 ## Code style
 
 - Write docstrings and type hints on every public function. The developer is a beginner, so this helps them understand the code.
@@ -24,6 +30,19 @@ A Django web app and REST API for keeping a personal bookshelf of Open Library b
 - Notes are always private: never shown on shared shelves or in the shared API.
 - Views return a partial for HTMX requests and a full page otherwise.
 - Configuration comes from environment variables; secrets stay out of the repo, and tests must run without a `.env` or network access.
+
+## Shared building blocks (reuse, don't rebuild)
+
+- `shelf/openlibrary.py`: Open Library service and its exceptions
+- `shelf/htmx.py`: `render_page_or_partial()`
+- `shelf/pagination.py` + `templates/partials/pagination.html`: shortened page links
+- `shelf/templates/shelf/partials/book_row.html`, `cover.html`: list row and cover with placeholder
+- `shelf/templatetags/shelf_extras.py`: `cover_url` filter
+
+## Conventions
+
+- Tests: `conftest.py` blocks the network, clears the cache, and provides `logged_in_client`. Test `openlibrary` with `responses`; test views by monkeypatching `openlibrary.<function>`.
+- HTMX error states return 200 (HTMX doesn't swap 4xx/5xx). Loading: `hx-indicator` on a `.htmx-indicator` spinner plus `hx-disabled-elt`.
 
 ## References
 

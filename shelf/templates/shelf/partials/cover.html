@@ -1,0 +1,18 @@
+{% load shelf_extras %}
+{% comment %}
+  A book cover with a placeholder.
+  Include with: cover_id, title, size ("S", "M", or "L"), and classes (size/shape of the box).
+  No cover_id: the placeholder shows right away.
+  Cover fails to load: assets/js/app.js removes the <img> and reveals the placeholder.
+{% endcomment %}
+<div class="{{ classes }} overflow-hidden bg-base-300">
+  {% if cover_id %}
+    <img src="{{ cover_id|cover_url:size }}" alt="Cover of {{ title }}" loading="lazy"
+         class="w-full h-full object-cover" data-cover>
+  {% endif %}
+  <div data-cover-placeholder aria-hidden="true"
+       class="{% if cover_id %}hidden{% else %}flex{% endif %} w-full h-full flex-col items-center justify-center text-center p-1 gap-1">
+    <span class="text-2xl opacity-40">📖</span>
+    <span class="text-[10px] leading-tight opacity-60 line-clamp-3">{{ title }}</span>
+  </div>
+</div>

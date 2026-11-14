@@ -3,12 +3,40 @@
 {% block title %}Search · One More Chapter{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 py-8 space-y-6">
+{# hx-indicator is inherited: the form and the pagination links all light up the spinner. #}
+<div class="max-w-4xl mx-auto px-4 py-8 space-y-6" hx-indicator="#search-spinner">
   <h1 class="text-3xl font-bold">Search</h1>
-  <div class="text-center py-16 px-4 space-y-3 bg-base-200 rounded-box">
-    <p class="text-5xl" aria-hidden="true">🔍</p>
-    <h2 class="text-xl font-semibold">Book search is coming soon</h2>
-    <p class="text-base-content/70">You'll be able to search Open Library by title, author, or keyword here.</p>
+
+  {% comment %}
+    Without JavaScript this is a normal GET form. With HTMX it swaps only the
+    results area, pushes the new URL (?q=…) so Back and bookmarks work, and
+    disables the button while the request is running.
+  {% endcomment %}
+  <form method="get" action="{% url 'shelf:search' %}" role="search"
+        hx-get="{% url 'shelf:search' %}" hx-target="#search-results" hx-push-url="true"
+        hx-disabled-elt="find button" class="flex flex-col sm:flex-row gap-2">
+    <label class="input w-full sm:flex-1">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+      </svg>
+      <input type="search" name="q" value="{{ query }}" placeholder="Title, author, or keyword"
+             aria-label="Search Open Library by title, author, or keyword" class="grow">
+    </label>
+    <button type="submit" class="btn btn-primary">
+      <span id="search-spinner" class="loading loading-spinner loading-sm htmx-indicator" aria-hidden="true"></span>
+      Search
+    </button>
+  </form>
+
+  <div id="search-results" aria-live="polite">
+    {% include "shelf/partials/search_results.html" %}
   </div>
 </div>
+{% endblock %}
+
+{% block footer %}
+  <p>
+    Book data from
+    <a href="https://openlibrary.org" class="link" target="_blank" rel="noopener">Open Library</a>
+  </p>
 {% endblock %}

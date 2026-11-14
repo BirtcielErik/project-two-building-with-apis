@@ -9,7 +9,9 @@ from collections.abc import Iterator
 from typing import NoReturn
 
 import pytest
+from django.contrib.auth.models import AbstractUser
 from django.core.cache import cache
+from django.test import Client
 
 NETWORK_BLOCKED_MESSAGE = (
     "Network access is blocked during tests. Mock the Open Library service "
@@ -37,6 +39,14 @@ def block_network(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(socket, "getaddrinfo", _refuse_network)
     monkeypatch.setattr(socket.socket, "connect", _refuse_network)
     monkeypatch.setattr(socket.socket, "connect_ex", _refuse_network)
+
+
+@pytest.fixture
+def logged_in_client(client: Client, django_user_model: type[AbstractUser]) -> Client:
+    """A test client logged in as a fresh user named "reader"."""
+    user = django_user_model.objects.create_user(username="reader", password="pw-12345-long")
+    client.force_login(user)
+    return client
 
 
 @pytest.fixture(autouse=True)

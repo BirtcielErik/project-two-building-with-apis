@@ -13,6 +13,18 @@
 }
 
 /*
+ * HTMX loading indicators take no space until a request is running
+ * (HTMX's built-in style only fades them, leaving a gap inside buttons).
+ */
+.htmx-indicator {
+  display: none;
+}
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+  display: inline-block;
+}
+
+/*
  * Tailwind scans the project folder for class names automatically.
  * Skip the throwaway prototypes and docs so their classes don't bloat our CSS.
  */

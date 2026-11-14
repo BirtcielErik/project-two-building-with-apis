@@ -1,15 +1,5 @@
 """Tests for the My Shelf page and the logged-in navigation."""
 
-import pytest
-
-
-@pytest.fixture
-def logged_in_client(client, django_user_model):
-    """A test client logged in as a fresh user named "reader"."""
-    user = django_user_model.objects.create_user(username="reader", password="pw-12345-long")
-    client.force_login(user)
-    return client
-
 
 def test_logged_in_user_visiting_home_goes_to_my_shelf(logged_in_client):
     response = logged_in_client.get("/")

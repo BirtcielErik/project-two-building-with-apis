@@ -1,0 +1,15 @@
+{% comment %}
+  One book as a list row: cover, title, authors, and first publish year.
+  Used by Search results now, and by My Shelf rows in later phases.
+  Include inside a <ul> with: book (anything with title, authors, first_publish_year, cover_id).
+{% endcomment %}
+<li class="flex gap-4 p-3" data-book-row>
+  {% include "shelf/partials/cover.html" with cover_id=book.cover_id title=book.title size="M" classes="w-16 h-24 sm:w-20 sm:h-30 rounded shrink-0" %}
+  <div class="flex-1 min-w-0 space-y-1">
+    <h3 class="font-semibold text-lg leading-tight">{{ book.title }}</h3>
+    <p class="text-sm text-base-content/70">
+      {{ book.authors|join:", "|default:"Unknown author" }}
+      {% if book.first_publish_year %}<span class="text-base-content/50">· {{ book.first_publish_year }}</span>{% endif %}
+    </p>
+  </div>
+</li>

@@ -28,6 +28,74 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-13 — Implemented Phase 3: Open Library search (read-only)
+
+### Prompts
+1. `/implement @prd/one-more-chapter.md @plans/one-more-chapter.md Implement Phase 3`
+2. Go ahead with all 3 *(TDD behaviors: failures sorted into
+   "unavailable" vs "bad response"; only successful searches cached;
+   the search view skips Open Library for blank queries and pages past 50)*
+3. Approved, go ahead and implement it *(RED test for behavior 1)*
+4. Yes, move on to behavior 2
+5. Approved, go ahead and implement it *(RED test for behavior 2)*
+6. Yes, move on to behavior 3
+7. Approved, go ahead and implement it *(RED test for behavior 3)*
+8. Yes, continue with the rest of Phase 3
+9. The manual checks pass
+10. Before we update PROMPTS.md - evaluate our current CLAUDE.md file and
+    suggest any needed additions to keep it up to date with the current
+    codebase *(interrupted my PROMPTS.md edit to ask this)*
+11. Apply 1-4, but be as succint as possible, and move the fixture
+12. Yes, update PROMPTS.md, then commit and push
+
+### Summary
+- **Outcome:** Built Phase 3 of the plan:
+  - `shelf/openlibrary.py`, the single Open Library service module:
+    search with a restricted `fields` list, 20 per page, a page cap of
+    50, a 5-second timeout, and a User-Agent with the app name, version,
+    and configured contact email (app name only without one). Failures
+    raise `OpenLibraryUnavailable` (timeouts, connection errors, 5xx,
+    429) or `OpenLibraryBadResponse` (other 4xx, invalid JSON, unexpected
+    shape). Successful searches are cached for 10 minutes, keyed on the
+    hashed, normalized (trimmed, lowercased) query plus the page.
+  - The Search page: an HTMX form that swaps only the results area and
+    pushes `?q=&page=`, with a spinner and disabled button while loading.
+    States: before searching, empty submit, past page 50, past the last
+    page, no matches, results (with total count), and a persistent
+    "unavailable" / "couldn't read" alert with Try again and Go to My
+    Shelf. Footer credit to Open Library.
+  - Reusable pieces for later phases: `shelf/htmx.py` (partial vs. full
+    page, `Vary: HX-Request`, full page on HTMX history-restore), a
+    list-row and a cover partial (placeholder for missing or failed
+    covers, via `?default=false` and a small script in `app.js`), a
+    shortened pagination partial built on Django's
+    `get_elided_page_range` and `{% querystring %}`, and a `cover_url`
+    template filter. Added `django.contrib.humanize` for the "1,234"
+    count.
+  - TDD for all three proposed behaviors, then normal tests for parsing,
+    request parameters, the User-Agent, per-page caching, and every view
+    state: 90 tests passing, Ruff clean.
+  - CLAUDE.md gained short Commands, Shared building blocks, and
+    Conventions sections. The duplicated `logged_in_client` test fixture
+    moved into `conftest.py`.
+- **Deviations:** The user took all three proposed TDD behaviors and
+  approved every RED test without changes; the manual checks passed on
+  the first run. Before the wrap-up, the user asked for a CLAUDE.md
+  review. I suggested five additions; the user took 1–4 (commands,
+  shared building blocks, testing conventions, HTMX/UI conventions),
+  skipped the optional workflow line, asked for them as succinct as
+  possible, and accepted my side suggestion to move the duplicated
+  fixture.
+- **Sideways:** The first RED run for behavior 1 failed with
+  `KeyError`/`TypeError` crashes in the two bad-structure cases instead
+  of on the assertion; I treated that as missing scaffolding and wrapped
+  parsing errors in the generic base error until all 8 cases failed on
+  the assertion. The behavior 3 scaffold view called `int()` on the raw
+  `page` parameter (it would crash on `?page=abc`); that was replaced
+  with safe page parsing and a test in the normal implementation step.
+  Ruff's formatter fixed two over-long test lines and, after the fixture
+  move, a leftover blank line.
+
 ## 2026-11-13 — Implemented Phase 2: accounts and a protected empty shelf
 
 ### Prompts

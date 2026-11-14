@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.humanize",  # number formatting such as 1,234 (intcomma)
     "django_tailwind_cli",
     "accounts",
     "shelf",

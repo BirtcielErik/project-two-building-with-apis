@@ -1,0 +1,87 @@
+{% load humanize %}
+{% comment %}
+  The results area of the Search page. HTMX requests receive only this
+  template; full page loads include it inside #search-results.
+  `state` is set by shelf.views.search (see its docstring for the list).
+{% endcomment %}
+{% url 'shelf:search' as search_url %}
+{% querystring as current_query %}
+
+{% if state == "start" %}
+  <div class="text-center py-16 px-4 space-y-3 bg-base-200 rounded-box" data-search-start>
+    <p class="text-5xl" aria-hidden="true">🔍</p>
+    <h2 class="text-xl font-semibold">Find your next book</h2>
+    <p class="text-base-content/70 max-w-md mx-auto">
+      Search Open Library's catalog by title, author, or keyword.
+    </p>
+  </div>
+
+{% elif state == "empty_query" %}
+  <div role="alert" class="alert alert-info alert-soft">
+    <span>Type a title, author, or keyword to search.</span>
+  </div>
+
+{% elif state == "past_cap" %}
+  <div role="alert" class="alert alert-info alert-soft">
+    <span>
+      Results stop at page {{ max_page }}. Try a more specific search,
+      such as adding the author's name or more words from the title.
+    </span>
+  </div>
+
+{% elif state == "unavailable" or state == "bad_response" %}
+  {# Persistent (not a toast): stays until the user tries again or leaves. #}
+  <div role="alert" class="alert {% if state == 'unavailable' %}alert-warning{% else %}alert-error{% endif %} flex flex-col sm:flex-row items-start sm:items-center gap-3" data-search-error="{{ state }}">
+    <div class="flex-1 space-y-1">
+      {% if state == "unavailable" %}
+        <h2 class="font-semibold">Open Library isn't responding right now.</h2>
+      {% else %}
+        <h2 class="font-semibold">Open Library sent back something we couldn't read.</h2>
+      {% endif %}
+      <p class="text-sm">This is usually temporary. Your shelf still works; only searching for new books is affected.</p>
+    </div>
+    <div class="flex gap-2">
+      <a href="{{ search_url }}{{ current_query }}" hx-get="{{ search_url }}{{ current_query }}"
+         hx-target="#search-results" class="btn btn-sm">Try again</a>
+      <a href="{% url 'shelf:my_shelf' %}" class="btn btn-sm btn-ghost">Go to My Shelf</a>
+    </div>
+  </div>
+
+{% elif state == "no_matches" %}
+  <div class="text-center py-16 px-4 space-y-3 bg-base-200 rounded-box" data-no-matches>
+    <p class="text-5xl" aria-hidden="true">🤔</p>
+    <h2 class="text-xl font-semibold">No books found for “{{ query }}”</h2>
+    <p class="text-base-content/70">Check the spelling, or try fewer or different words.</p>
+  </div>
+
+{% elif state == "past_end" %}
+  <div role="alert" class="alert alert-info alert-soft">
+    <span>
+      There are no results on this page.
+      {% querystring page=last_page as last_query %}
+      <a href="{{ search_url }}{{ last_query }}" hx-get="{{ search_url }}{{ last_query }}"
+         hx-target="#search-results" hx-push-url="true" class="link">Go to the last page ({{ last_page }})</a>
+    </span>
+  </div>
+
+{% else %}
+  <div class="space-y-3">
+    <div class="text-sm text-base-content/70">
+      <p>
+        <span class="font-semibold text-base-content" data-total>{{ total|intcomma }}</span>
+        book{{ total|pluralize }} found for “{{ query }}” · page {{ page }} of {{ num_pages }}
+      </p>
+      {% if is_capped %}
+        <p>Only the first {{ num_pages }} pages can be browsed. Try a more specific search to narrow it down.</p>
+      {% endif %}
+    </div>
+
+    <ul class="divide-y divide-base-300 bg-base-200 rounded-box">
+      {% for book in results %}
+        {% include "shelf/partials/book_row.html" %}
+      {% endfor %}
+    </ul>
+
+    {% include "partials/pagination.html" with base_url=search_url target="#search-results" %}
+  </div>
+{% endif %}

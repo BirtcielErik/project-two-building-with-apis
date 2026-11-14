@@ -1,0 +1,40 @@
+{% comment %}
+  Numbered page links with a shortened list ("1 … 6 7 8 … 50").
+  Include with:
+    base_url        the page's path, e.g. {% url 'shelf:search' %}
+    target          CSS selector of the area HTMX replaces, e.g. "#search-results"
+    page, num_pages, page_links (from shelf.pagination.page_links), previous_page, next_page
+  Each link keeps the other URL parameters ({% querystring %}) and changes only "page".
+  The hx-* settings on <nav> apply to every link inside it.
+{% endcomment %}
+{% if num_pages > 1 %}
+<nav aria-label="Pagination" class="flex justify-center pt-4"
+     hx-target="{{ target }}" hx-push-url="true" hx-swap="innerHTML show:{{ target }}:top">
+  <div class="join">
+    {% if previous_page %}
+      {% querystring page=previous_page as previous_query %}
+      <a class="join-item btn btn-sm" href="{{ base_url }}{{ previous_query }}" hx-get="{{ base_url }}{{ previous_query }}" aria-label="Previous page">«</a>
+    {% else %}
+      <span class="join-item btn btn-sm btn-disabled" aria-hidden="true">«</span>
+    {% endif %}
+
+    {% for number in page_links %}
+      {% if number is None %}
+        <span class="join-item btn btn-sm btn-disabled" aria-hidden="true">…</span>
+      {% elif number == page %}
+        <span class="join-item btn btn-sm btn-primary" aria-current="page">{{ number }}</span>
+      {% else %}
+        {% querystring page=number as number_query %}
+        <a class="join-item btn btn-sm" href="{{ base_url }}{{ number_query }}" hx-get="{{ base_url }}{{ number_query }}">{{ number }}</a>
+      {% endif %}
+    {% endfor %}
+
+    {% if next_page %}
+      {% querystring page=next_page as next_query %}
+      <a class="join-item btn btn-sm" href="{{ base_url }}{{ next_query }}" hx-get="{{ base_url }}{{ next_query }}" aria-label="Next page">»</a>
+    {% else %}
+      <span class="join-item btn btn-sm btn-disabled" aria-hidden="true">»</span>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}

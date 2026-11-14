@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Profile · One More Chapter{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-8 space-y-6">
+  <h1 class="text-3xl font-bold">Profile</h1>
+  <div class="card bg-base-200 shadow-sm">
+    <div class="card-body">
+      <p>You're logged in as <strong>{{ user.username }}</strong>.</p>
+      <p class="text-base-content/70">
+        Your display name, share link, and API access settings will appear here.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% comment %}
+  One form field: its label, the input, any help text, and its errors right underneath.
+  Usage: {% include "partials/form_field.html" with field=form.username %}
+{% endcomment %}
+<fieldset class="fieldset">
+  <label class="fieldset-legend" for="{{ field.id_for_label }}">{{ field.label }}</label>
+  {{ field }}
+  {% for error in field.errors %}
+    <p class="text-error text-sm" data-field-error>{{ error }}</p>
+  {% endfor %}
+  {% if field.help_text %}
+    <div class="text-xs text-base-content/60 [&_ul]:list-disc [&_ul]:pl-4">{{ field.help_text|safe }}</div>
+  {% endif %}
+</fieldset>

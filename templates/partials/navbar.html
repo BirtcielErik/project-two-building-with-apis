@@ -1,4 +1,9 @@
-{# Site navigation. On phones (below the "sm" breakpoint) the links collapse into a menu. #}
+{% comment %}
+  Site navigation. On phones (below the "sm" breakpoint) the links collapse into a menu.
+  Logged in: Search, My Shelf, and a user menu (Profile, Log out).
+  Logged out: Sign up and Log in.
+{% endcomment %}
+{% with current=request.resolver_match.url_name %}
 <nav class="navbar bg-base-200 shadow-sm px-4">
   <div class="flex-1">
     <a href="/" class="btn btn-ghost text-xl gap-2 px-2">
@@ -7,22 +12,79 @@
     </a>
   </div>
 
-  {# Wide screens: links shown in a row. #}
-  <div class="hidden sm:flex gap-2">
-    <a href="/accounts/signup/" class="btn btn-primary">Sign up</a>
-    <a href="/accounts/login/" class="btn btn-outline">Log in</a>
-  </div>
+  {% if user.is_authenticated %}
+    {# Wide screens: links in a row, then the user menu. #}
+    {# The current page gets a filled "neutral" button, matching the phone menu's highlight. #}
+    <div class="hidden sm:flex items-center gap-1">
+      {% if current == 'search' %}
+        <a href="{% url 'shelf:search' %}" class="btn btn-neutral" aria-current="page">Search</a>
+      {% else %}
+        <a href="{% url 'shelf:search' %}" class="btn btn-ghost">Search</a>
+      {% endif %}
+      {% if current == 'my_shelf' %}
+        <a href="{% url 'shelf:my_shelf' %}" class="btn btn-neutral" aria-current="page">My Shelf</a>
+      {% else %}
+        <a href="{% url 'shelf:my_shelf' %}" class="btn btn-ghost">My Shelf</a>
+      {% endif %}
+      <div class="dropdown dropdown-end">
+        <div tabindex="0" role="button" class="btn btn-ghost gap-1" aria-label="User menu">
+          {{ user.username }}
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+        <ul tabindex="0" class="dropdown-content menu bg-base-200 rounded-box z-50 mt-3 w-48 p-2 shadow">
+          <li><a href="{% url 'accounts:profile' %}">Profile</a></li>
+          <li>
+            {# Logging out changes state, so it is a POST form rather than a link. #}
+            <form method="post" action="{% url 'accounts:logout' %}" class="p-0">
+              {% csrf_token %}
+              <button type="submit" class="w-full text-left px-3 py-1.5">Log out</button>
+            </form>
+          </li>
+        </ul>
+      </div>
+    </div>
 
-  {# Phones: the same links inside a dropdown menu. #}
-  <div class="dropdown dropdown-end sm:hidden">
-    <div tabindex="0" role="button" class="btn btn-ghost btn-square" aria-label="Open menu">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-      </svg>
+    {# Phones: everything inside one dropdown menu. #}
+    <div class="dropdown dropdown-end sm:hidden">
+      <div tabindex="0" role="button" class="btn btn-ghost btn-square" aria-label="Open menu">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </div>
+      <ul tabindex="0" class="dropdown-content menu bg-base-200 rounded-box z-50 mt-3 w-52 p-2 shadow">
+        <li class="menu-title">{{ user.username }}</li>
+        <li><a href="{% url 'shelf:search' %}"{% if current == 'search' %} class="menu-active"{% endif %}>Search</a></li>
+        <li><a href="{% url 'shelf:my_shelf' %}"{% if current == 'my_shelf' %} class="menu-active"{% endif %}>My Shelf</a></li>
+        <li><a href="{% url 'accounts:profile' %}"{% if current == 'profile' %} class="menu-active"{% endif %}>Profile</a></li>
+        <li>
+          <form method="post" action="{% url 'accounts:logout' %}" class="p-0">
+            {% csrf_token %}
+            <button type="submit" class="w-full text-left px-3 py-1.5">Log out</button>
+          </form>
+        </li>
+      </ul>
     </div>
-    <div tabindex="0" class="dropdown-content bg-base-200 rounded-box z-50 mt-3 w-48 p-3 shadow flex flex-col gap-2">
-      <a href="/accounts/signup/" class="btn btn-primary btn-block">Sign up</a>
-      <a href="/accounts/login/" class="btn btn-outline btn-block">Log in</a>
+  {% else %}
+    {# Wide screens: links shown in a row. #}
+    <div class="hidden sm:flex gap-2">
+      <a href="{% url 'accounts:signup' %}" class="btn btn-primary">Sign up</a>
+      <a href="{% url 'accounts:login' %}" class="btn btn-outline">Log in</a>
     </div>
-  </div>
+
+    {# Phones: the same links inside a dropdown menu. #}
+    <div class="dropdown dropdown-end sm:hidden">
+      <div tabindex="0" role="button" class="btn btn-ghost btn-square" aria-label="Open menu">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </div>
+      <div tabindex="0" class="dropdown-content bg-base-200 rounded-box z-50 mt-3 w-48 p-3 shadow flex flex-col gap-2">
+        <a href="{% url 'accounts:signup' %}" class="btn btn-primary btn-block">Sign up</a>
+        <a href="{% url 'accounts:login' %}" class="btn btn-outline btn-block">Log in</a>
+      </div>
+    </div>
+  {% endif %}
 </nav>
+{% endwith %}

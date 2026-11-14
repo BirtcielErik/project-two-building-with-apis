@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Sign up · One More Chapter{% endblock %}
+
+{% block content %}
+<section class="flex justify-center px-4 py-12">
+  <div class="card bg-base-200 shadow-md w-full max-w-md">
+    <form method="post" class="card-body" novalidate>
+      {% csrf_token %}
+      <h1 class="card-title text-2xl">Create your account</h1>
+      <p class="text-base-content/70">Start your own bookshelf in a few seconds.</p>
+
+      {% for error in form.non_field_errors %}
+        <div role="alert" class="alert alert-error"><span>{{ error }}</span></div>
+      {% endfor %}
+
+      {% include "partials/form_field.html" with field=form.username %}
+      {% include "partials/form_field.html" with field=form.password1 %}
+      {% include "partials/form_field.html" with field=form.password2 %}
+
+      <button type="submit" class="btn btn-primary mt-4">Sign up</button>
+      <p class="text-sm text-center text-base-content/70">
+        Already have an account?
+        <a href="{% url 'accounts:login' %}" class="link link-primary">Log in</a>
+      </p>
+    </form>
+  </div>
+</section>
+{% endblock %}

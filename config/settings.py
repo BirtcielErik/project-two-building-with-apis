@@ -83,6 +83,11 @@ AUTH_USER_MODEL = "accounts.User"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Where @login_required sends anonymous visitors, and where login/logout lead.
+LOGIN_URL = "accounts:login"
+LOGIN_REDIRECT_URL = "shelf:my_shelf"
+LOGOUT_REDIRECT_URL = "shelf:landing"
+
 
 # --- Cache -------------------------------------------------------------------
 

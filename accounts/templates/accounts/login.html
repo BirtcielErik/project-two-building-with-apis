@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Log in · One More Chapter{% endblock %}
+
+{% block content %}
+<section class="flex justify-center px-4 py-12">
+  <div class="card bg-base-200 shadow-md w-full max-w-md">
+    <form method="post" class="card-body" novalidate>
+      {% csrf_token %}
+      <h1 class="card-title text-2xl">Welcome back</h1>
+      <p class="text-base-content/70">Log in to get back to your shelf.</p>
+
+      {# "Wrong username or password" isn't tied to one field, so it shows above the form. #}
+      {% for error in form.non_field_errors %}
+        <div role="alert" class="alert alert-error"><span>{{ error }}</span></div>
+      {% endfor %}
+
+      {% include "partials/form_field.html" with field=form.username %}
+      {% include "partials/form_field.html" with field=form.password %}
+
+      {# After logging in, go back to the page that asked for it (if any). #}
+      <input type="hidden" name="next" value="{{ next }}">
+
+      <button type="submit" class="btn btn-primary mt-4">Log in</button>
+      <p class="text-sm text-center text-base-content/70">
+        New here?
+        <a href="{% url 'accounts:signup' %}" class="link link-primary">Create an account</a>
+      </p>
+    </form>
+  </div>
+</section>
+{% endblock %}

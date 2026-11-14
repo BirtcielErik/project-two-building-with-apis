@@ -28,6 +28,59 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-13 — Implemented Phase 2: accounts and a protected empty shelf
+
+### Prompts
+1. `/implement @prd/one-more-chapter.md @plans/one-more-chapter.md Implement Phase 2`
+2. 1 and 3 *(TDD behaviors: signup logs in and redirects to My Shelf;
+   private pages require login)*
+3. Approved, go ahead and implement it *(RED test for behavior 1)*
+4. Yes, move on to behavior 3
+5. Approved, go ahead and implement it *(RED test for behavior 3)*
+6. Yes, continue with the rest of Phase 2
+7. On the desktop view - the current page is not highlighted in the navbar
+8. The manual checks pass, but I have one question before we finish the
+   phase. If someone clones my repo from GitHub, is the user I just
+   created available to them to log in with?
+9. I would like to add a 'seed' command that creates two sample users with
+   populated reading lists - this can either be its own new phase or it
+   can be added into one of the smaller remaining phases
+   - Answered one multiple-choice question, taking the recommendation:
+     add it to Phase 7.
+
+### Summary
+- **Outcome:** Built Phase 2 of the plan:
+  - Signup (Django's `UserCreationForm` subclassed for `accounts.User`)
+    that logs the new user in and redirects to My Shelf; login and
+    POST-only logout using Django's built-in views. Logged-in users who
+    open `/`, signup, or login go straight to My Shelf.
+  - Auth pages as centered DaisyUI cards with inline field errors (red
+    text and a red input border via `DaisyFormMixin`) and cross-links.
+  - A logged-in navbar with Search, My Shelf, and a user dropdown
+    (Profile, Log out), collapsing into the phone menu.
+  - Login-required My Shelf (empty state with a "Find a book" button),
+    plus placeholder Search and Profile pages.
+  - TDD for two behaviors (signup auto-login + redirect; login-required
+    pages with `next`), then normal tests for the rest: 47 tests passing,
+    Ruff clean.
+  - Updated the plan: Phase 7 now also includes a `seed` management
+    command for two demo users with populated reading lists.
+- **Deviations:** I proposed three TDD behaviors; the user chose 1 and 3
+  and dropped behavior 2 (the `/` redirect), which got a normal test
+  instead. Both RED tests were approved without changes. Follow-up
+  question: whether a locally created user ships with the repo (no:
+  `db.sqlite3` is git-ignored, and a fresh clone migrates an empty
+  database). The user then asked for a seed command; I recommended adding
+  it to Phase 7 over a new Phase 12 or growing it phase by phase, and the
+  user agreed.
+- **Sideways:** On desktop, the current page wasn't highlighted in the
+  navbar: DaisyUI's `btn-active` fills with `base-200`, the same color as
+  the navbar, so it was invisible. Caught by the user during manual
+  checks; fixed by using `btn-neutral` (matching the phone menu's
+  highlight) plus `aria-current="page"`, with a new test. My first fix
+  put the `aria-current` attribute inside the class string; I rewrote it
+  as a plain `if/else` for readability before running anything.
+
 ## 2026-11-13 — Implemented Phase 1: project foundation and landing page
 
 ### Prompts

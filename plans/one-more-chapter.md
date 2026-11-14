@@ -177,6 +177,12 @@ Add the `/shelf/<pk>/` detail page with two columns. The left column is sticky o
 
 Add the `Note` model, deleted together with its entry. Below the "Your reading" card on the detail page, add an add-note box at the top and notes listed newest first with timestamps, each with a delete button that asks for confirmation. Adding and deleting update the list in place through HTMX. Empty notes are rejected inline. A friendly empty state shows when there are no notes. My Shelf rows show the real notes count, and the Remove dialog's count is accurate.
 
+Add a `seed` management command (`python manage.py seed`) that creates two sample users with populated reading lists, so a fresh clone has realistic data to explore:
+- Each user has about 15–20 books across all four statuses, with a mix of ratings and finished dates, and notes on some entries.
+- One user has a display name and an active share link (ready for Phase 8). The other has sharing off.
+- Book snapshots (real Open Library work keys and cover IDs, verified when written) are built into the command, so seeding never calls Open Library and works offline.
+- It is safe to re-run: it resets only the two demo users' shelves and never touches other users. It prints the demo usernames and passwords when it finishes.
+
 ### Acceptance criteria
 
 - [ ] Adding a note puts it at the top of the list without a reload, with its timestamp.
@@ -185,6 +191,8 @@ Add the `Note` model, deleted together with its entry. Below the "Your reading" 
 - [ ] Notes are deleted when their entry is removed.
 - [ ] Adding to or deleting from another user's entry or note returns 404.
 - [ ] The shelf rows' notes count matches.
+- [ ] `python manage.py seed` creates two demo users whose shelves cover every status, with ratings, finished dates, and notes. One has a display name and share link.
+- [ ] Seeding makes no network calls, and running it twice leaves the same data (no duplicates). Other users are untouched.
 
 ---
 

@@ -28,6 +28,49 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-13 — Wrote the initial CLAUDE.md
+
+### Prompts
+1. Create the initial CLAUDE.md for this project. Keep it to about 20-30
+   lines. Include only: a one-line project description; the approved
+   technology stack and package manager; durable, project-wide architecture
+   decisions already established in the PRD; short pointers to the PRD,
+   plan, and prototypes instead of repeating their details. Do not add
+   commands yet because the project tooling has not been installed or
+   verified. Do not predict project structure, paths, template conventions,
+   URL conventions, or testing commands that do not exist yet. Do not copy
+   business requirements, user stories, implementation phases, rejected
+   alternatives, or detailed feature rules into CLAUDE.md. Do not invent
+   new architectural conventions.
+2. *(Correction, after rejecting the first write of the file)* Please add
+   the following: "docstrings and type hints on every public function" - I
+   am a beginner and this will help me understand the code that is being
+   written
+3. Append a session log to PROMPTS.md at the repo root, under today's
+   date, newest entry at the top. Record every prompt I gave you this
+   session, in order, including any corrections. End the entry with a
+   short summary: the outcome, any places where I deviated from a
+   recommended answer or asked follow-up questions, and anything that went
+   sideways.
+
+### Summary
+- **Outcome:** Read the PRD, the start of the plan, and the repo layout,
+  then wrote `CLAUDE.md` (about 30 lines, counting blank lines). It has a
+  one-line description, the stack with uv as the package manager, a Code
+  style section with the docstring and type-hint rule, nine architecture
+  decisions taken from the PRD, and pointers to the PRD, plan, prototypes,
+  and Open Library research doc. It has no commands, URL paths, user
+  stories, or phases. I also saved a memory note that the user is a
+  beginner. Nothing was committed.
+- **Deviations:** No recommendations were offered, so none were
+  overridden, and no follow-up questions were asked. The user added a
+  coding convention (docstrings and type hints on every public function)
+  that wasn't in the original instructions.
+- **Sideways:** The user rejected the first write of `CLAUDE.md` to add
+  the docstring and type-hint rule. The second write included it. The
+  "Code style" heading and the pointer to the research doc were my
+  additions; the user didn't ask for either.
+
 ## 2026-11-13 — Broke the One More Chapter PRD into an 11-phase implementation plan
 
 ### Prompts

@@ -1,0 +1,20 @@
+/*
+ * Tailwind input file for One More Chapter (owned by this project).
+ *
+ * django-tailwind-cli compiles this into assets/css/tailwind.css.
+ * It lives outside the static folder on purpose: only the compiled output
+ * should be served to browsers.
+ */
+@import "tailwindcss";
+
+/* Turn on DaisyUI and make Forest the only (and default) theme. */
+@plugin "daisyui" {
+  themes: forest --default;
+}
+
+/*
+ * Tailwind scans the project folder for class names automatically.
+ * Skip the throwaway prototypes and docs so their classes don't bloat our CSS.
+ */
+@source not "../prototypes";
+@source not "../docs";

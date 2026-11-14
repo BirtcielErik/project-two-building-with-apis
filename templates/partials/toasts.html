@@ -1,0 +1,14 @@
+{% comment %}
+  Toast container for success messages (Django's messages framework).
+  Full pages render it here. Later, HTMX responses will refresh it with an
+  out-of-band swap (hx-swap-oob), so a toast can appear without a page reload.
+  assets/js/app.js removes each toast after a few seconds.
+{% endcomment %}
+<div id="toasts" class="toast toast-end toast-bottom z-50"{% if oob %} hx-swap-oob="true"{% endif %}>
+  {% for message in messages %}
+    <div role="status" data-toast
+         class="alert {% if message.tags == 'error' %}alert-error{% elif message.tags == 'warning' %}alert-warning{% else %}alert-success{% endif %}">
+      <span>{{ message }}</span>
+    </div>
+  {% endfor %}
+</div>

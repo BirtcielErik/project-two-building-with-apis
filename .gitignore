@@ -218,3 +218,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# One More Chapter: generated files
+# Compiled Tailwind CSS (rebuild with: uv run --env-file .env python manage.py tailwind build)
+assets/css/tailwind.css
+# Output of collectstatic
+staticfiles/

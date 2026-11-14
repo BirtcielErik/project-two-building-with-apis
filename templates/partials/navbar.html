@@ -1,0 +1,28 @@
+{# Site navigation. On phones (below the "sm" breakpoint) the links collapse into a menu. #}
+<nav class="navbar bg-base-200 shadow-sm px-4">
+  <div class="flex-1">
+    <a href="/" class="btn btn-ghost text-xl gap-2 px-2">
+      {% include "partials/logo.html" %}
+      One More Chapter
+    </a>
+  </div>
+
+  {# Wide screens: links shown in a row. #}
+  <div class="hidden sm:flex gap-2">
+    <a href="/accounts/signup/" class="btn btn-primary">Sign up</a>
+    <a href="/accounts/login/" class="btn btn-outline">Log in</a>
+  </div>
+
+  {# Phones: the same links inside a dropdown menu. #}
+  <div class="dropdown dropdown-end sm:hidden">
+    <div tabindex="0" role="button" class="btn btn-ghost btn-square" aria-label="Open menu">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </div>
+    <div tabindex="0" class="dropdown-content bg-base-200 rounded-box z-50 mt-3 w-48 p-3 shadow flex flex-col gap-2">
+      <a href="/accounts/signup/" class="btn btn-primary btn-block">Sign up</a>
+      <a href="/accounts/login/" class="btn btn-outline btn-block">Log in</a>
+    </div>
+  </div>
+</nav>

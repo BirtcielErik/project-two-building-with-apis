@@ -1,0 +1,30 @@
+{% load static tailwind_cli %}<!doctype html>
+<html lang="en" data-theme="forest">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}One More Chapter{% endblock %}</title>
+  {% tailwind_css %}
+  {# HTMX is served from our own static files (pinned version), never a CDN. #}
+  <script src="{% static 'js/htmx-2.0.7.min.js' %}" defer></script>
+  <script src="{% static 'js/app.js' %}" defer></script>
+</head>
+{# Every HTMX request sends the CSRF token, so POSTs from hx-post work. #}
+<body class="min-h-screen flex flex-col bg-base-100 text-base-content"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+
+  {% include "partials/navbar.html" %}
+
+  <main class="flex-1 w-full">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer footer-center p-6 text-sm text-base-content/60">
+    {% block footer %}
+      <p>One More Chapter: your shelf, your notes.</p>
+    {% endblock %}
+  </footer>
+
+  {% include "partials/toasts.html" %}
+</body>
+</html>

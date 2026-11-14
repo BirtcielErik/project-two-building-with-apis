@@ -28,6 +28,75 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-13 — Implemented Phase 1: project foundation and landing page
+
+### Prompts
+1. `/implement @prd/one-more-chapter.md @plans/one-more-chapter.md Implement Phase 1`
+2. Approved, go ahead with all three *(TDD behaviors: env-based debug and
+   secret key rules, blocking real network calls in tests, themed 404)*
+3. Approved, go ahead and implement it *(RED test for behavior 1)*
+4. Approved, go ahead and implement it *(RED test for behavior 2)*
+5. Yes, move on to behavior 3
+6. Approved, go ahead and implement it *(RED test for behavior 3)*
+7. Yes, continue with the rest of Phase 1
+8. In the navbar on the desktop site, the Log In button blends in with the
+   background - it is not obvious that it is a button. The same applies to
+   both the Log In and Sign Up buttons nested inside the hamburger menu on
+   the phone display.
+9. The text on the Log In buttons for both desktop and mobile should not be
+   green - they should match the color of the landing page's hero.
+10. In both desktop and mobile versions, the ordering of the Sign Up and Log
+    In buttons is reversed between the nav bar and the hero - please make
+    them appear in the same order on both layouts
+11. The manual checks pass, go ahead and finish the phase
+
+### Summary
+- **Outcome:** Built Phase 1 of the plan:
+  - Django 6.1 project `config` with the `accounts` and `shelf` apps; the
+    Python project renamed to `one-more-chapter`.
+  - Environment-based settings through `config/env.py`, a committed
+    `.env.example`, and a local git-ignored `.env`. Debug is off unless
+    `DJANGO_DEBUG` is yes-like; without a secret key and with debug off,
+    startup fails loudly. Tests use `config/settings_test.py`, so they need
+    no `.env`.
+  - Custom `accounts.User` (`share_token`, `display_name`) before the first
+    migration.
+  - Tailwind + DaisyUI via `django-tailwind-cli` with `tailwind-cli-extra`
+    pinned to v2.10.35 and a project-owned `tailwind/source.css` making
+    Forest the only theme. HTMX 2.0.7 vendored in `assets/js/`.
+  - Base layout (navbar collapsing to a menu on phones, toast container),
+    themed 404 page, and the landing page (hero plus three feature cards).
+  - Root `conftest.py` with fixtures that block real network calls and
+    clear the cache. Ruff configured; README rewritten with setup, run,
+    test, and configuration instructions.
+  - TDD for three behaviors (settings rules, network blocking, themed 404),
+    then normal tests for the rest: 24 tests passing, Ruff clean.
+- **Deviations:** All three proposed TDD behaviors were approved as
+  written, and each RED test was approved without changes. The user
+  requested three navbar styling fixes during manual verification (see
+  Sideways). Choices I made and flagged rather than asked about:
+  - compiled CSS is git-ignored, so a fresh clone runs `tailwind build`;
+  - `scripts/` is excluded from Ruff instead of rewriting the research
+    script;
+  - Ruff targets Python 3.13 formatting to keep `except (A, B):`;
+  - test functions use descriptive names rather than docstrings;
+  - for the button order, I kept the hero's order (Sign up first) and
+    changed the navbar, offering to flip it.
+- **Sideways:**
+  - Behavior 1 was covered by two small test functions (debug flag and
+    secret key) rather than one; this was disclosed with the RED test.
+  - `django-tailwind-cli` warned that the source CSS sat inside the static
+    folder; it was moved to `tailwind/source.css`.
+  - The first CSS build ran before any templates existed, so it had to be
+    rebuilt to pick up their classes.
+  - The first Ruff run failed on Django's generated stub files and the
+    research script; stubs were cleaned up and `scripts/` excluded.
+  - The navbar's Log in button first used `btn-ghost`, which blended into
+    the background. The fix used `btn-outline btn-primary` (green), which
+    the user also rejected; the final version is plain `btn-outline`,
+    matching the hero. The user also caught that the navbar and hero listed
+    the two buttons in opposite orders.
+
 ## 2026-11-13 — Wrote the initial CLAUDE.md
 
 ### Prompts

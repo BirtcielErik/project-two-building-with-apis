@@ -14,3 +14,18 @@ def cover_url(cover_id: int | None, size: str = "M") -> str:
     Usage: ``{{ book.cover_id|cover_url:"M" }}`` (sizes ``S``, ``M``, ``L``).
     """
     return openlibrary.cover_url(cover_id, size) or ""
+
+
+@register.filter
+def filled_stars(rating: int | None) -> str:
+    """Return one "★" per star in a 1–5 rating (``""`` when unrated).
+
+    Usage: ``{{ rating|filled_stars }}``.
+    """
+    return "★" * (rating or 0)
+
+
+@register.filter
+def empty_stars(rating: int | None) -> str:
+    """Return the "★"s left over to make five, drawn faded next to ``filled_stars``."""
+    return "★" * (5 - (rating or 0))

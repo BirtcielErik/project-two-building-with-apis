@@ -3,18 +3,29 @@
 {% block title %}My Shelf · One More Chapter{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto px-4 py-8 space-y-6">
+<div class="max-w-4xl mx-auto px-4 py-8 space-y-6">
   <h1 class="text-3xl font-bold">My Shelf</h1>
 
-  {# Empty shelf: explain what to do next and point to Search. #}
-  <div class="text-center py-16 px-4 space-y-4 bg-base-200 rounded-box" data-empty-shelf>
-    <p class="text-5xl" aria-hidden="true">📚</p>
-    <h2 class="text-xl font-semibold">Your shelf is empty</h2>
-    <p class="text-base-content/70 max-w-md mx-auto">
-      Search Open Library for a book you're reading, finished, or want to read next,
-      and save it here.
+  {% if entries %}
+    <p class="text-sm text-base-content/70" data-shelf-count>
+      {{ entries|length }} book{{ entries|length|pluralize }}
     </p>
-    <a href="{% url 'shelf:search' %}" class="btn btn-primary">Find a book</a>
-  </div>
+    <ul class="divide-y divide-base-300 bg-base-200 rounded-box">
+      {% for entry in entries %}
+        {% include "shelf/partials/book_row.html" with book=entry.book %}
+      {% endfor %}
+    </ul>
+  {% else %}
+    {# Empty shelf: explain what to do next and point to Search. #}
+    <div class="text-center py-16 px-4 space-y-4 bg-base-200 rounded-box" data-empty-shelf>
+      <p class="text-5xl" aria-hidden="true">📚</p>
+      <h2 class="text-xl font-semibold">Your shelf is empty</h2>
+      <p class="text-base-content/70 max-w-md mx-auto">
+        Search Open Library for a book you're reading, finished, or want to read next,
+        and save it here.
+      </p>
+      <a href="{% url 'shelf:search' %}" class="btn btn-primary">Find a book</a>
+    </div>
+  {% endif %}
 </div>
 {% endblock %}

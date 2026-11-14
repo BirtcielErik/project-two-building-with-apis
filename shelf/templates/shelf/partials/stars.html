@@ -1,0 +1,9 @@
+{% load shelf_extras %}
+{% comment %}
+  A read-only 1–5 star rating, or "Not rated". Include with: rating (a number or None).
+{% endcomment %}
+{% if rating %}
+  <span class="text-warning tracking-tight" title="{{ rating }} of 5" aria-label="{{ rating }} out of 5 stars" data-rating="{{ rating }}">{{ rating|filled_stars }}<span class="text-base-content/25">{{ rating|empty_stars }}</span></span>
+{% else %}
+  <span class="text-base-content/40 text-xs">Not rated</span>
+{% endif %}

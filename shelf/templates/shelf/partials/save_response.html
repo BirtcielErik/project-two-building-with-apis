@@ -1,0 +1,6 @@
+{% comment %}
+  HTMX response to saving a book: the row's new save area, plus the toast
+  container swapped "out of band" so the success toast appears.
+{% endcomment %}
+{% include "shelf/partials/save_button.html" %}
+{% include "partials/toasts.html" with oob=True %}

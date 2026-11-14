@@ -1,0 +1,51 @@
+{% comment %}
+  The save area at the end of a search result row. Include with:
+  - work_key: the book's Open Library work key.
+  - saved_entry_id: the user's entry ID if the book is on their shelf, else None.
+  - save_error (optional): a message shown under the button when saving failed.
+  - next_url: where to return without JavaScript (the current search page).
+
+  Without JavaScript the form posts normally. With HTMX it posts in the
+  background and this whole area is replaced by the response.
+  The buttons share one form: whichever is clicked sends its `status` value.
+{% endcomment %}
+<div class="shrink-0 flex flex-col items-end gap-1" data-save-area="{{ work_key }}">
+  {% if saved_entry_id %}
+    {# Book detail pages arrive in Phase 6; until then, jump to the row on My Shelf. #}
+    <a href="{% url 'shelf:my_shelf' %}#entry-{{ saved_entry_id }}" class="btn btn-sm btn-ghost text-success" data-on-shelf>
+      ✓ On your shelf
+    </a>
+  {% else %}
+    <form method="post" action="{% url 'shelf:save_book' %}"
+          hx-post="{% url 'shelf:save_book' %}" hx-target="closest [data-save-area]" hx-swap="outerHTML"
+          hx-indicator="find .htmx-indicator" hx-disabled-elt="find fieldset">
+      {% csrf_token %}
+      <input type="hidden" name="work_key" value="{{ work_key }}">
+      <input type="hidden" name="next" value="{{ next_url }}">
+      {# Disabling the fieldset disables every button in it while the save runs. #}
+      <fieldset class="join">
+        <button type="submit" name="status" value="tbr" class="btn btn-sm btn-primary join-item"
+                title="Save as To Be Read" aria-label="Save as To Be Read">
+          <span class="loading loading-spinner loading-xs htmx-indicator" aria-hidden="true"></span>
+          Save
+        </button>
+        {# No join-item on this wrapper: that class adds a border, which drew a box around ▾. #}
+        <div class="dropdown dropdown-end">
+          <div tabindex="0" role="button" class="btn btn-sm btn-primary join-item px-2" aria-label="Save with a different status">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+          <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-40 mt-1 w-56 p-2 shadow">
+            <li><button type="submit" name="status" value="reading">Save as Currently Reading</button></li>
+            <li><button type="submit" name="status" value="finished">Save as Finished</button></li>
+            <li><button type="submit" name="status" value="dnf">Save as Did Not Finish</button></li>
+          </ul>
+        </div>
+      </fieldset>
+    </form>
+    {% if save_error %}
+      <p role="alert" class="text-error text-xs max-w-56 text-right" data-save-error>{{ save_error }}</p>
+    {% endif %}
+  {% endif %}
+</div>

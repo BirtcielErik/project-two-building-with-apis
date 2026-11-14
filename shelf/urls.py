@@ -10,4 +10,5 @@ urlpatterns = [
     path("", views.landing, name="landing"),
     path("shelf/", views.my_shelf, name="my_shelf"),
     path("search/", views.search, name="search"),
+    path("search/save/", views.save_book, name="save_book"),
 ]

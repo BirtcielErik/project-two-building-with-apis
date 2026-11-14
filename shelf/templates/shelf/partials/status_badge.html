@@ -1,0 +1,5 @@
+{% comment %}
+  A reading-status badge. Include with: status (the stored value) and label (its display name).
+{% endcomment %}
+<span class="badge shrink-0 whitespace-nowrap {% if status == 'reading' %}badge-primary{% elif status == 'finished' %}badge-success{% elif status == 'dnf' %}badge-error badge-outline{% else %}badge-neutral{% endif %}"
+      data-status="{{ status }}">{{ label }}</span>

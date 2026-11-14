@@ -2,13 +2,18 @@
 
 import logging
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
 
-from shelf import openlibrary
-from shelf.htmx import render_page_or_partial
+from shelf import openlibrary, saving
+from shelf.htmx import is_htmx, render_page_or_partial
+from shelf.models import ShelfEntry
 from shelf.pagination import page_links
 
 logger = logging.getLogger(__name__)
@@ -26,12 +31,13 @@ def landing(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def my_shelf(request: HttpRequest) -> HttpResponse:
-    """Show the user's bookshelf.
+    """Show the user's bookshelf, newest additions first.
 
-    Books can't be saved yet (that arrives with search), so for now the
-    shelf always shows its empty state with a button to the Search page.
+    Everything comes from our own database, so the shelf works even when
+    Open Library is down. An empty shelf shows a button to the Search page.
     """
-    return render(request, "shelf/my_shelf.html")
+    entries = request.user.shelf_entries.select_related("book").order_by("-added_at")
+    return render(request, "shelf/my_shelf.html", {"entries": entries})
 
 
 @login_required
@@ -63,10 +69,88 @@ def search(request: HttpRequest) -> HttpResponse:
         context["state"] = "past_cap"
     else:
         context.update(_search_open_library(query, page))
+        if context["state"] == "results":
+            context["rows"] = _mark_saved(request, context["results"])
 
     return render_page_or_partial(
         request, "shelf/search.html", "shelf/partials/search_results.html", context
     )
+
+
+@login_required
+@require_POST
+def save_book(request: HttpRequest) -> HttpResponse:
+    """Save a search result to the user's shelf (POST ``work_key`` and optional ``status``).
+
+    HTMX requests get the result row's save area back: "✓ On your shelf" plus
+    a toast on success, or the Save button with an inline error on failure.
+    Without JavaScript, the browser is sent back to the search page (``next``)
+    with the outcome as a message.
+    """
+    work_key = request.POST.get("work_key", "").strip()
+    status = request.POST.get("status") or ShelfEntry.Status.TO_BE_READ
+    next_url = _safe_next_url(request)
+    entry: ShelfEntry | None = None
+    error = ""
+
+    try:
+        entry = saving.save_to_shelf(request.user, work_key, status)
+    except saving.AlreadyOnShelf as already:
+        entry = already.entry  # Nothing to fix: just show where it is.
+    except saving.SaveError as save_error:
+        error = str(save_error)
+    except openlibrary.OpenLibraryUnavailable:
+        logger.warning("Open Library unavailable while saving %r", work_key, exc_info=True)
+        error = "Open Library isn't responding right now. Please try again in a moment."
+    except openlibrary.OpenLibraryBadResponse:
+        logger.warning("Bad response from Open Library while saving %r", work_key, exc_info=True)
+        error = "Open Library sent back something we couldn't read. Please try again."
+    else:
+        messages.success(
+            request, f"Saved “{entry.book.title}” to your shelf as {entry.get_status_display()}."
+        )
+
+    if not is_htmx(request):
+        if error:
+            messages.error(request, error)
+        return redirect(next_url)
+
+    context = {
+        "work_key": work_key,
+        "saved_entry_id": entry.pk if entry else None,
+        "save_error": error,
+        "next_url": next_url,
+    }
+    return render(request, "shelf/partials/save_response.html", context)
+
+
+def _mark_saved(
+    request: HttpRequest, results: list[openlibrary.SearchResult]
+) -> list[tuple[openlibrary.SearchResult, int | None]]:
+    """Pair each search result with the user's entry ID for it (``None`` if it isn't saved).
+
+    One database query covers the whole page of results.
+    """
+    keys = [result.work_key for result in results]
+    saved = dict(
+        ShelfEntry.objects.filter(user=request.user, book__ol_work_key__in=keys).values_list(
+            "book__ol_work_key", "pk"
+        )
+    )
+    return [(result, saved.get(result.work_key)) for result in results]
+
+
+def _safe_next_url(request: HttpRequest) -> str:
+    """Return the posted ``next`` URL if it points to this site, else the Search page.
+
+    Checking the host stops a crafted form from redirecting users to another site.
+    """
+    next_url = request.POST.get("next", "")
+    if url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return next_url
+    return reverse("shelf:search")
 
 
 def _parse_page(raw: str | None) -> int:

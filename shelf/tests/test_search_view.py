@@ -3,6 +3,7 @@
 import pytest
 
 from shelf import openlibrary
+from shelf.models import Book, ShelfEntry
 
 
 @pytest.fixture
@@ -240,3 +241,46 @@ def test_search_page_credits_open_library(logged_in_client) -> None:
 
     assert "Book data from" in html
     assert 'href="https://openlibrary.org"' in html
+
+
+# --- Save buttons and "On your shelf" ----------------------------------------
+
+
+def test_each_result_has_a_save_button_with_a_status_menu(logged_in_client, monkeypatch) -> None:
+    fake_search_returning(monkeypatch, total=1, results=[make_book(1)])
+
+    html = logged_in_client.get("/search/?q=book").content.decode()
+
+    assert 'hx-post="/search/save/"' in html
+    assert 'name="work_key" value="OL1W"' in html
+    assert 'name="next" value="/search/?q=book"' in html
+    for status in ("tbr", "reading", "finished", "dnf"):
+        assert f'name="status" value="{status}"' in html
+    # The default is explained, both above the results and on the button.
+    assert "data-save-hint" in html
+    assert 'title="Save as To Be Read"' in html
+
+
+def test_results_already_on_the_shelf_say_so_with_one_query(
+    logged_in_client, monkeypatch, django_user_model, django_assert_num_queries
+) -> None:
+    reader = django_user_model.objects.get(username="reader")
+    other = django_user_model.objects.create_user(username="other", password="pw-12345-long")
+    saved = ShelfEntry.objects.create(
+        user=reader, book=Book.objects.create(ol_work_key="OL1W", title="Book 1")
+    )
+    # Book 2 is on someone else's shelf only, so it should still offer Save.
+    ShelfEntry.objects.create(
+        user=other, book=Book.objects.create(ol_work_key="OL2W", title="Book 2")
+    )
+    fake_search_returning(monkeypatch, total=3, results=[make_book(1), make_book(2), make_book(3)])
+
+    # Session + user lookups, then exactly one query to mark the whole page.
+    with django_assert_num_queries(3):
+        html = logged_in_client.get("/search/?q=book", headers=HTMX_HEADERS).content.decode()
+
+    assert html.count("data-on-shelf") == 1
+    assert f'href="/shelf/#entry-{saved.pk}"' in html
+    assert 'name="work_key" value="OL1W"' not in html
+    assert 'name="work_key" value="OL2W"' in html
+    assert 'name="work_key" value="OL3W"' in html

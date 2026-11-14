@@ -28,6 +28,77 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-14 — Implemented Phase 4: Save from search and list books on My Shelf
+
+### Prompts
+1. `/implement @prd/one-more-chapter.md @plans/one-more-chapter.md Implement Phase 4`
+2. Go ahead with all 3 *(TDD behaviors: the work-key lookup adds the
+   `/works/` prefix and treats zero matches as not found; bad keys and
+   duplicates are rejected before any outbound call; a book already in
+   the `Book` table saves while Open Library is down)*
+3. Approved, go ahead and implement it *(RED test for behavior 1)*
+4. Yes, move on to behavior 2
+5. Approved, go ahead and implement it *(RED test for behavior 2)*
+6. Yes, move on to behavior 3
+7. Approved, go ahead and implement it *(RED test for behavior 3)*
+8. Yes, continue with the rest of Phase 4
+9. The right side of the save button (where the drop down bar is) has a
+   white square background that is visible behind the save button
+10. When a book has a long title, the save button moves places when using
+    a phone display - is it possible to wrap the title text earlier and
+    keep the save button in the same place for all entries?
+11. Can we put some kind of message somewhere that explains that the
+    default Save button will save the book as "To Be Read" - it is
+    currently unclear
+12. It would be nice to make the hint below the search bar stand out a
+    bit more - it currently blends in with the other text below the
+    search bar
+13. That looks better - the other manual checks pass
+
+### Summary
+- **Outcome:** Built Phase 4 of the plan:
+  - `Book` and `ShelfEntry` models (first `shelf` migration), with
+    `Book.authors` stored as one comma-separated string so Phase 5 can
+    search and sort by author as plain text. Rating (1–5) and finished
+    date (not in the future) validators are on the model already.
+  - `openlibrary.get_work()`: a `key:/works/<key>` lookup through the
+    search endpoint that adds the prefix back, checks the returned key,
+    and raises the new `OpenLibraryNotFound` on zero matches. Not cached.
+  - `shelf/saving.py`: `save_to_shelf()`, shared by the website now and
+    the API in Phase 10. Checks status and key format, then duplicates
+    (`AlreadyOnShelf` carries the existing entry), reuses an existing
+    `Book` or looks it up once, and turns a double-click race into
+    `AlreadyOnShelf`. Outages pass through as Open Library exceptions.
+  - Search rows end with a split Save button (Save = To Be Read, ▾ menu
+    for the other statuses) that swaps to "✓ On your shelf" in place
+    with a toast (out-of-band swap), or shows an inline error. Works
+    without JavaScript via a safe `next` redirect. Saved results are
+    marked with one query per results page. "On your shelf" links to the
+    row on My Shelf until the detail page exists (Phase 6).
+  - My Shelf lists entries newest first as rows with status badge, stars
+    or "Not rated", finished and added dates, and a "0 notes"
+    placeholder (Phase 7). Admin pages for both models.
+  - TDD for all three behaviors, then normal tests for the service,
+    save flow, save view, search marking, and My Shelf: 137 tests
+    passing, Ruff clean.
+- **Deviations:** No recommendations were overridden. Manual testing led
+  to three UI follow-ups: a visual bug (below), keeping the Save button
+  top-right on phones by letting long titles wrap instead of the row,
+  and a "Save adds a book as To Be Read" hint above the results (plus a
+  button tooltip), restyled as a soft info alert to stand out.
+- **Sideways:**
+  - Behavior 2's first RED was an `IntegrityError` from the stub, not an
+    assertion; the stub was fixed and the test re-run to a real RED.
+  - Behavior 3's RED was the `OpenLibraryUnavailable` exception itself
+    rather than an assertion; this was flagged and approved as-is
+    because the exception *is* the missing behavior.
+  - Two no-JavaScript save tests followed the redirect into a real
+    search and were stopped by the network-blocking fixture; they now
+    fake `openlibrary.search`.
+  - The split button showed a light box behind ▾ because `join-item`
+    (which adds a border) was on the dropdown wrapper as well as the
+    button; removed from the wrapper.
+
 ## 2026-11-13 — Implemented Phase 3: Open Library search (read-only)
 
 ### Prompts

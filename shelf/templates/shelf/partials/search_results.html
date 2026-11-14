@@ -76,9 +76,21 @@
       {% endif %}
     </div>
 
+    {# Explains the split Save button. A soft info alert so it stands apart from the count. #}
+    <div role="note" class="alert alert-info alert-soft text-sm py-2" data-save-hint>
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>
+        <strong>Save</strong> adds a book to your shelf as <strong>To Be Read</strong>.
+        Use the <span aria-hidden="true">▾</span><span class="sr-only">menu</span> next to it
+        to save as Currently Reading, Finished, or Did Not Finish.
+      </span>
+    </div>
+
     <ul class="divide-y divide-base-300 bg-base-200 rounded-box">
-      {% for book in results %}
-        {% include "shelf/partials/book_row.html" %}
+      {% for book, saved_entry_id in rows %}
+        {% include "shelf/partials/book_row.html" with actions_template="shelf/partials/save_button.html" work_key=book.work_key next_url=request.get_full_path %}
       {% endfor %}
     </ul>
 

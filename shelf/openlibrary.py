@@ -55,6 +55,10 @@ class OpenLibraryBadResponse(OpenLibraryError):
     """Open Library answered, but with invalid JSON or an unexpected structure."""
 
 
+class OpenLibraryNotFound(OpenLibraryError):
+    """Open Library has no work with the requested key."""
+
+
 # --- Result types ------------------------------------------------------------
 
 
@@ -70,6 +74,11 @@ class SearchResult:
     authors: list[str] = field(default_factory=list)
     first_publish_year: int | None = None
     cover_id: int | None = None
+
+    @property
+    def authors_display(self) -> str:
+        """Return the authors as one string, e.g. ``"Terry Pratchett, Neil Gaiman"``."""
+        return ", ".join(self.authors)
 
 
 @dataclass(frozen=True)
@@ -151,6 +160,30 @@ def search(query: str, page: int = 1) -> SearchPage:
     result_page = SearchPage(query=query, page=page, total=total, results=results)
     cache.set(key, result_page, SEARCH_CACHE_SECONDS)
     return result_page
+
+
+def get_work(work_key: str) -> SearchResult:
+    """Look up one work by its key (like ``"OL27482W"``) and return its display details.
+
+    Uses the search endpoint with a ``key:/works/<key>`` query, which returns
+    everything we store in one request. The ``/works/`` prefix must be added
+    back: without it the query matches nothing. Not cached, because the local
+    ``Book`` table already remembers every book that has been saved.
+
+    Raises ``OpenLibraryNotFound`` when there is no such work (Open Library
+    answers HTTP 200 with zero matches), and ``OpenLibraryUnavailable`` or
+    ``OpenLibraryBadResponse`` when the request fails.
+    """
+    data = _get_json(
+        SEARCH_URL,
+        {"q": f"key:{WORKS_PREFIX}{work_key}", "fields": SEARCH_FIELDS, "limit": 1},
+    )
+    _total, results = _parse_search(data)
+    # Never trust the first result blindly: it must be the work we asked for.
+    for result in results:
+        if result.work_key == work_key:
+            return result
+    raise OpenLibraryNotFound(f"Open Library has no work {work_key}.")
 
 
 def _search_cache_key(query: str, page: int) -> str:

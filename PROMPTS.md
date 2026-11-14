@@ -28,6 +28,52 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-13 — Broke the One More Chapter PRD into an 11-phase implementation plan
+
+### Prompts
+1. `/prd-to-plan @prd/one-more-chapter.md`
+2. Merge 8 and 9, merge 12 and 13
+3. Append a session log to PROMPTS.md at the repo root, under today's
+   date, newest entry at the top. Record every prompt I gave you this
+   session, in order, including any corrections. End the entry with a
+   short summary: the outcome, any places where I deviated from a
+   recommended answer or asked follow-up questions, and anything that went
+   sideways.
+
+### Summary
+- **Outcome:** Looked through the repo. It has no Django code yet: only
+  `pyproject.toml` (still named `book-tracker`), `scripts/search_books.py`,
+  the docs, and the prototypes. So the first phase also sets up the
+  project. I proposed 13 vertical-slice phases mapped to the PRD's 99 user
+  stories. After the merges, wrote `plans/one-more-chapter.md` with 11
+  phases:
+  1. Project foundation and landing page
+  2. Accounts and a protected empty shelf
+  3. Open Library search (read-only)
+  4. Save from search and list books on My Shelf
+  5. Shelf browsing
+  6. Book detail and editing
+  7. Notes
+  8. Profile, sharing, and public shared shelf
+  9. API read access with tokens
+  10. API entry writes
+  11. API notes, public shared API, and throttling
+
+  The plan's header records the durable decisions: stack, apps, config
+  variables, models, auth and 404 scoping, Open Library error mapping, the
+  HTMX convention, and the URL paths. The PRD didn't fix the paths, so I
+  chose them and flagged them for review. Nothing was committed.
+- **Deviations:** The user merged two pairs of the 13 proposed phases:
+  - share link + public page with share management + display name (old
+    8 and 9);
+  - API notes with the public shared API + throttling (old 12 and 13).
+
+  I had offered these merges as an option. I also offered two other
+  changes that were not taken: splitting the Tailwind/HTMX build tooling
+  out of Phase 1, and adding base API throttling earlier. No follow-up
+  questions were asked.
+- **Sideways:** Nothing went wrong.
+
 ## 2026-11-12 — Grilled the One More Chapter design, prototyped two pages, wrote the PRD
 
 ### Prompts

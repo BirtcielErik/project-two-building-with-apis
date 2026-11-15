@@ -28,7 +28,69 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
-## 2026-11-14 — Implemented Phase 10: API entry writes
+## 2026-11-14 — Implemented Phase 11: API notes, public shared API, and throttling
+
+### Prompts
+1. `/implement @prd/one-more-chapter.md @plans/one-more-chapter.md Implement Phase 11`
+2. 1 and 2 are good for TDD - 3 can be implemented normally *(TDD
+   behaviors offered: the shared API is public and never leaks notes or
+   user identifiers; note requests on another user's entry are 404;
+   exceeding the create or shared limit returns 429 with `Retry-After`)*
+3. Make it pass *(RED test for behavior 2)*
+4. Yes, move on to Behavior 1
+5. Make it pass - keep the entry id and timestamps unexposed *(RED test
+   for behavior 1)*
+6. Yes, implement the rest of the phase
+7. Manual checks pass, finish the phase
+
+### Summary
+- **Outcome:** Built Phase 11 of the plan:
+  - `NoteViewSet` at `/api/entries/<id>/notes/[<note id>/]` (list,
+    create, retrieve, delete), routed by hand in `shelf/api_urls.py`
+    because a plain router can't nest. It has no update mixin, so
+    PUT/PATCH are 405. `initial()` looks up the entry among the caller's
+    own entries before any action runs, so another user's entry is a 404
+    even for a create with an invalid body. `NoteSerializer` trims
+    whitespace and uses the website's "Write something before adding a
+    note." message for blank text.
+  - Public `SharedShelfView` at `/api/shared/<token>/`: no login,
+    no authentication classes, paginated at 12, GET only (writes are
+    405), 404 for unknown, regenerated, or disabled tokens. A separate
+    `SharedShelfEntrySerializer` lists only `book`, `status`, `rating`,
+    and `finished_on`: no notes, user, entry ID, or timestamps.
+  - DRF throttling in settings: `user` 60/minute by default, and
+    `entry_create` and `shared` at 10/minute. `ShelfEntryViewSet` adds the
+    scoped throttle only for `create`. Going over returns 429 with
+    `Retry-After`.
+  - TDD for behaviors 2 and 1 (built in that order, since the notes
+    routes came first), then normal tests for note listing, creation,
+    blank text, deletion, 405 on edit, 401s, shared writes (405, even for
+    the owner), 404s after regenerate/disable, an empty shared shelf, and
+    all three throttle limits plus counter isolation between tests. The
+    `token_client` fixture moved to `conftest.py`. The suite grew from 342
+    to 368 tests. The README's API section now lists every endpoint
+    (including Phase 10's writes, which it was missing), the error codes,
+    and the rate limits; CLAUDE.md lists the new API pieces and the
+    throttle convention.
+- **Deviations:** Chose TDD for only behaviors 1 and 2; throttling was
+  built and tested normally. For behavior 1 I flagged whether to expose
+  the entry `id` and timestamps on shared shelves; the user chose to keep
+  them hidden, matching the PRD's field list. Both RED tests were approved
+  without changes.
+- **Sideways:**
+  - The shared scaffold reused the owner serializer, which already had no
+    notes or user field, so the RED failed only on the extra `id`,
+    `added_at`, and `updated_at` keys. The exact key-set assertion is
+    what made the test meaningful.
+  - DRF reads throttle rates at import time, so tests can't lower them
+    with a settings override; the throttle tests use the real limits
+    (11 and 61 requests), which still run quickly.
+  - I ran `ruff check --fix` and `ruff format` from the shell, which
+    rewrote import order in `shelf/api.py` and
+    `shelf/tests/test_api_entries.py` (2 fixes; the formatter changed
+    nothing). That broke the rule that file edits go through the
+    Edit/Write tools. The changes were import sorting only and the
+    check-only commands then passed.
 
 ### Prompts
 1. `/implement @prd/one-more-chapter.md @plans/one-more-chapter.md Implement Phase 10`

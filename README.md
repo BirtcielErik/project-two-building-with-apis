@@ -41,10 +41,23 @@ curl -H "Authorization: Token <your token>" "http://127.0.0.1:8000/api/entries/?
 | Endpoint | What it does |
 | --- | --- |
 | `GET /api/entries/` | Your shelf, 12 per page. Takes the same `q`, `status`, `min_rating`, `rated`, `ordering`, and `page` parameters as My Shelf. |
+| `POST /api/entries/` | Add a book: send `work_key` (e.g. `OL27482W`) plus optional `status`, `rating`, `finished_on`. The server looks up the book itself. |
 | `GET /api/entries/<id>/` | One entry, with its book nested (including `cover_url`). |
+| `PUT` / `PATCH /api/entries/<id>/` | Change `status`, `rating`, and `finished_on`. Sending `work_key` is a 400. |
+| `DELETE /api/entries/<id>/` | Remove the entry and its notes. |
+| `GET` / `POST /api/entries/<id>/notes/` | List the entry's notes (newest first), or add one: `{"text": "..."}`. |
+| `GET` / `DELETE /api/entries/<id>/notes/<note id>/` | One note, or delete it. Notes can't be edited (PUT/PATCH is a 405). |
+| `GET /api/shared/<share token>/` | Public, read-only shared shelf (no token needed): book, status, rating, and finished date only. Never notes. |
 
 While logged in, you can also open these URLs in the browser. Another user's
-entry returns 404, and a missing or wrong token returns 401.
+entry or note returns 404, and a missing or wrong token returns 401.
+
+Errors: a bad, unknown, or duplicate work key is a 400; Open Library being down
+is a 503, and an unreadable answer from it is a 502.
+
+Rate limits: 60 requests a minute per user, and 10 a minute for adding entries
+and for the shared endpoint. Going over returns 429 with a `Retry-After` header
+(seconds to wait).
 
 ## Test and lint
 

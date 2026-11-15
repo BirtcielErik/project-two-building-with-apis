@@ -12,6 +12,8 @@ import pytest
 from django.contrib.auth.models import AbstractUser
 from django.core.cache import cache
 from django.test import Client
+from rest_framework.authtoken.models import Token
+from rest_framework.test import APIClient
 
 NETWORK_BLOCKED_MESSAGE = (
     "Network access is blocked during tests. Mock the Open Library service "
@@ -52,6 +54,15 @@ def logged_in_client(client: Client, reader: AbstractUser) -> Client:
     """A test client logged in as ``reader``."""
     client.force_login(reader)
     return client
+
+
+@pytest.fixture
+def token_client(reader: AbstractUser) -> APIClient:
+    """An API client that sends ``reader``'s token in the Authorization header."""
+    token, _ = Token.objects.get_or_create(user=reader)
+    api_client = APIClient()
+    api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+    return api_client
 
 
 @pytest.fixture(autouse=True)

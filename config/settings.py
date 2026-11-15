@@ -158,6 +158,18 @@ REST_FRAMEWORK = {
     # 12 per page, the same as My Shelf (shelf.filters.PAGE_SIZE).
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 12,
+    # Rate limits, so a script can't use the app to flood Open Library. Every
+    # logged-in user gets 60 requests a minute. Two endpoints are stricter
+    # (shelf.api asks for these "scopes"): creating entries, which may call
+    # Open Library, and the public shared shelf, which anyone can hit. Counters
+    # live in the in-memory cache; going over a limit gives "429 Too Many
+    # Requests" with a Retry-After header saying how many seconds to wait.
+    "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.UserRateThrottle"],
+    "DEFAULT_THROTTLE_RATES": {
+        "user": "60/minute",
+        "entry_create": "10/minute",
+        "shared": "10/minute",
+    },
 }
 
 

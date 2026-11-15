@@ -4,22 +4,11 @@ import datetime
 
 import pytest
 from django.utils import timezone
-from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from shelf import openlibrary
 from shelf.models import Book, Note, ShelfEntry
 from shelf.tests.helpers import add_to_shelf
-
-
-@pytest.fixture
-def token_client(reader) -> APIClient:
-    """An API client that sends ``reader``'s token in the Authorization header."""
-    token, _ = Token.objects.get_or_create(user=reader)
-    client = APIClient()
-    client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
-    return client
-
 
 # --- Behavior 1: a token sees only its owner's shelf -------------------------------
 

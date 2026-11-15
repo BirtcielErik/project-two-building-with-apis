@@ -3,7 +3,7 @@
 from rest_framework import serializers
 
 from shelf import openlibrary, saving
-from shelf.models import Book, ShelfEntry
+from shelf.models import Book, Note, ShelfEntry
 
 
 class BookSerializer(serializers.ModelSerializer):
@@ -81,3 +81,42 @@ class ShelfEntrySerializer(serializers.ModelSerializer):
             rating=validated_data.get("rating"),
             finished_on=validated_data.get("finished_on"),
         )
+
+
+class SharedShelfEntrySerializer(serializers.ModelSerializer):
+    """One book on a shared shelf, as anyone with the share link sees it.
+
+    This is a separate serializer from ``ShelfEntrySerializer`` on purpose: it
+    lists only what the owner agreed to share (book details, status, rating,
+    finished date). Notes, the owner's username and ID, the entry's ID, and
+    its timestamps are never included, even if fields are added elsewhere later.
+    """
+
+    book = BookSerializer(read_only=True)
+
+    class Meta:
+        model = ShelfEntry
+        fields = ["book", "status", "rating", "finished_on"]
+        read_only_fields = fields
+
+
+class NoteSerializer(serializers.ModelSerializer):
+    """One private note on a shelf entry: its text and when it was written.
+
+    The entry comes from the URL (``/api/entries/<pk>/notes/``), not the body.
+    """
+
+    class Meta:
+        model = Note
+        fields = ["id", "text", "created_at"]
+        read_only_fields = ["id", "created_at"]
+        # Spaces at the start and end are trimmed, so a note of only whitespace
+        # is blank and rejected, with the same message as the website.
+        extra_kwargs = {
+            "text": {
+                "error_messages": {
+                    "required": "Write something before adding a note.",
+                    "blank": "Write something before adding a note.",
+                }
+            }
+        }

@@ -25,7 +25,9 @@ def add_to_shelf(user, key: str, title: str, authors: str = "Some Author", **fie
 
 def listed_titles(html: str) -> list[str]:
     """Return the titles of the list rows on a My Shelf page, in order."""
-    return re.findall(r"data-book-row.*?<h3[^>]*>(.*?)</h3>", html, re.DOTALL)
+    headings = re.findall(r"data-book-row.*?<h3[^>]*>(.*?)</h3>", html, re.DOTALL)
+    # The title is wrapped in a link to the detail page, so keep only its text.
+    return [re.sub(r"<[^>]+>", "", heading).strip() for heading in headings]
 
 
 def status_counts(html: str) -> dict[str, int]:

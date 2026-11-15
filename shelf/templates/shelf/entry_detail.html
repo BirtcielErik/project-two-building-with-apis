@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}{{ entry.book.title }} · One More Chapter{% endblock %}
+
+{% block content %}
+{% with book=entry.book %}
+<div class="max-w-5xl mx-auto px-4 py-8 space-y-8">
+  <a href="{% url 'shelf:my_shelf' %}" class="link link-hover text-sm text-base-content/70">← Back to My Shelf</a>
+
+  {# Two columns on tablets and up; one stacked column on phones. #}
+  <div class="grid md:grid-cols-[260px_1fr] gap-8">
+    {# The book's info stays in view (sticky) while the right column scrolls. #}
+    <aside class="md:sticky md:top-4 self-start space-y-3" data-book-info>
+      {% include "shelf/partials/cover.html" with cover_id=book.cover_id title=book.title size="L" classes="w-40 md:w-full aspect-[2/3] rounded-lg shadow-lg mx-auto md:mx-0" %}
+      <div class="text-center md:text-left space-y-1">
+        <h1 class="text-2xl font-bold leading-tight break-words">{{ book.title }}</h1>
+        <p class="text-base-content/80">{{ book.authors_display|default:"Unknown author" }}</p>
+        {% if book.first_publish_year %}
+          <p class="text-sm text-base-content/50">First published {{ book.first_publish_year }}</p>
+        {% endif %}
+        <p class="text-xs text-base-content/50">On your shelf since {{ entry.added_at|date:"M j, Y" }}</p>
+        <a href="{{ open_library_url }}" target="_blank" rel="noopener"
+           class="link link-hover text-sm text-base-content/70">View on Open Library ↗</a>
+      </div>
+
+      {% comment %}
+        Remove from shelf. With JavaScript, pressing the button opens the
+        confirmation dialog below instead (see assets/js/app.js); the dialog's
+        Remove button then submits this form for real.
+      {% endcomment %}
+      <form id="remove-form" method="post" action="{% url 'shelf:entry_remove' entry.pk %}"
+            data-confirm-dialog="remove-dialog" class="pt-2 text-center md:text-left">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline btn-error btn-sm">Remove from shelf</button>
+      </form>
+    </aside>
+
+    <div class="space-y-8 min-w-0">
+      <section class="card bg-base-200">
+        <div class="card-body">
+          <h2 class="card-title">Your reading</h2>
+          {% include "shelf/partials/reading_form.html" %}
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<dialog id="remove-dialog" class="modal" aria-labelledby="remove-dialog-title">
+  <div class="modal-box">
+    <h3 id="remove-dialog-title" class="font-bold text-lg">Remove from your shelf?</h3>
+    <p class="py-3 text-sm">
+      “{{ book.title }}” will be removed from your shelf, along with its rating and finished date.
+      {# Phase 7 (notes) makes this say exactly how many notes will go. #}
+      Any notes you wrote about it will be deleted too. This can't be undone.
+    </p>
+    <div class="modal-action">
+      <form method="dialog"><button class="btn btn-ghost">Cancel</button></form>
+      <button type="submit" form="remove-form" class="btn btn-error" data-confirmed>Remove</button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+{% endwith %}
+{% endblock %}

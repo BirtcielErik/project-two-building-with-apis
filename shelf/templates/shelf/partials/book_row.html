@@ -2,7 +2,8 @@
   One book as a list row: cover, title, authors, and first publish year.
   Used by Search results and My Shelf. Include inside a <ul> with:
   - book: anything with title, authors_display, first_publish_year, cover_id.
-  - entry (optional): a ShelfEntry, which adds status, stars, dates, and notes count.
+  - entry (optional): a ShelfEntry, which adds status, stars, dates, and notes count,
+    and makes the title a link to the book's detail page.
   - actions_template (optional): a template drawn at the end of the row (e.g. the Save button).
 {% endcomment %}
 <li class="flex gap-4 p-3" data-book-row{% if entry %} id="entry-{{ entry.pk }}"{% endif %}>
@@ -11,7 +12,13 @@
     {# No wrapping here: a long title wraps its own text, so the badge or Save button stays top-right. #}
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0 flex-1">
-        <h3 class="font-semibold text-lg leading-tight break-words">{{ book.title }}</h3>
+        <h3 class="font-semibold text-lg leading-tight break-words">
+          {% if entry %}
+            <a href="{% url 'shelf:entry_detail' entry.pk %}" class="link link-hover" data-entry-link>{{ book.title }}</a>
+          {% else %}
+            {{ book.title }}
+          {% endif %}
+        </h3>
         <p class="text-sm text-base-content/70">
           {{ book.authors_display|default:"Unknown author" }}
           {% if book.first_publish_year %}<span class="text-base-content/50">· {{ book.first_publish_year }}</span>{% endif %}

@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
@@ -20,6 +20,7 @@ from shelf.filters import (
     ShelfEntryFilter,
     status_counts,
 )
+from shelf.forms import ShelfEntryForm
 from shelf.htmx import is_htmx, render_page_or_partial
 from shelf.models import ShelfEntry
 from shelf.pagination import page_links
@@ -100,6 +101,76 @@ def _status_options(current: str, counts: dict[str, int], total: int) -> list[di
     for option in options:
         option["count"] = counts.get(option["value"], 0) if option["value"] else total
     return options
+
+
+@login_required
+def entry_detail(request: HttpRequest, pk: int) -> HttpResponse:
+    """Show one book on the user's shelf, with the form for its reading details.
+
+    Like My Shelf, this page only reads our own database, so it works even
+    when Open Library is down.
+    """
+    entry = _get_own_entry(request, pk)
+    return _render_detail(request, entry, ShelfEntryForm(instance=entry))
+
+
+def _get_own_entry(request: HttpRequest, pk: int) -> ShelfEntry:
+    """Return the logged-in user's shelf entry ``pk``, or raise a 404.
+
+    Another user's entry is "not found" too (never "forbidden"), so nobody can
+    discover which entry IDs exist on other people's shelves.
+    """
+    return get_object_or_404(ShelfEntry.objects.select_related("book"), pk=pk, user=request.user)
+
+
+def _render_detail(request: HttpRequest, entry: ShelfEntry, form: ShelfEntryForm) -> HttpResponse:
+    """Render the full book detail page for ``entry`` with the given reading form."""
+    context = {
+        "entry": entry,
+        "form": form,
+        "open_library_url": openlibrary.work_url(entry.book.ol_work_key),
+    }
+    return render(request, "shelf/entry_detail.html", context)
+
+
+@login_required
+@require_POST
+def entry_update(request: HttpRequest, pk: int) -> HttpResponse:
+    """Save the status, rating, and finished date posted from the detail page's form.
+
+    All three are saved together, or none are if any is invalid. HTMX requests
+    get the form back, with "Saved ✓" or the errors next to their fields.
+    Without JavaScript, a successful save goes back to the detail page with a
+    toast, and a failed one shows the full page with the errors.
+    """
+    entry = _get_own_entry(request, pk)
+    form = ShelfEntryForm(request.POST, instance=entry)
+    saved = form.is_valid()
+    if saved:
+        form.save()
+
+    if not is_htmx(request):
+        if not saved:
+            return _render_detail(request, entry, form)
+        messages.success(request, "Saved your reading details.")
+        return redirect("shelf:entry_detail", pk=entry.pk)
+
+    return render(
+        request,
+        "shelf/partials/reading_form.html",
+        {"entry": entry, "form": form, "saved": saved},
+    )
+
+
+@login_required
+@require_POST
+def entry_remove(request: HttpRequest, pk: int) -> HttpResponse:
+    """Remove a book from the user's shelf, then go back to My Shelf with a toast."""
+    entry = _get_own_entry(request, pk)
+    title = entry.book.title
+    entry.delete()
+    messages.success(request, f"Removed “{title}” from your shelf.")
+    return redirect("shelf:my_shelf")
 
 
 @login_required

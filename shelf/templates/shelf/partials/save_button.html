@@ -11,8 +11,7 @@
 {% endcomment %}
 <div class="shrink-0 flex flex-col items-end gap-1" data-save-area="{{ work_key }}">
   {% if saved_entry_id %}
-    {# Book detail pages arrive in Phase 6; until then, jump to the row on My Shelf. #}
-    <a href="{% url 'shelf:my_shelf' %}#entry-{{ saved_entry_id }}" class="btn btn-sm btn-ghost text-success" data-on-shelf>
+    <a href="{% url 'shelf:entry_detail' saved_entry_id %}" class="btn btn-sm btn-ghost text-success" data-on-shelf>
       ✓ On your shelf
     </a>
   {% else %}

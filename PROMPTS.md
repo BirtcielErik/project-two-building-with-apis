@@ -28,6 +28,77 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-14 — Implemented Phase 6: Book detail and editing
+
+### Prompts
+1. `/implement @prd/one-more-chapter.md @plans/one-more-chapter.md Implement Phase 6`
+2. yes, go with all three *(TDD behaviors: status, rating, and finished
+   date save together with rating allowed at any status and clearable; a
+   future finished date is rejected inline and nothing is saved; another
+   user's entry is 404 for view, update, and remove)*
+3. make it pass *(RED test for behavior 1)*
+4. yes, move on to behavior 2
+5. make it pass *(RED test for behavior 2)*
+6. yes, move on to behavior 3
+7. make it pass *(RED test for behavior 3)*
+8. yes, continue with the rest of the phase
+9. When navigating to /shelf/1 as a different user - a 404 page is
+   displayed but it is not the styled version
+10. The Remove from shelf button and the clear button for the star ratings
+    need outlines
+11. The spacing between the Back to My Shelf link and the cover art is
+    very small - can we increase that a bit?
+12. It is still pretty tight - lets go to 32px
+13. The manual checks pass, finish the phase
+
+### Summary
+- **Outcome:** Built Phase 6 of the plan:
+  - `/shelf/<pk>/` detail page in two columns (stacks on phones). The
+    left column is sticky on wide screens: large cover, title, authors,
+    first published year, "On your shelf since", an Open Library link,
+    and Remove from shelf.
+  - `shelf/forms.py`: `ShelfEntryForm`, a ModelForm over status, rating,
+    and finished date. The rules stay on the model (rating 1–5, no future
+    date), so the Phase 10 API can share them. The date picker's `max` is
+    today. The "Your reading" card renders it as a status button group
+    (TBR / Reading / Finished / DNF), clickable DaisyUI stars with Clear,
+    and the date input.
+  - `entry_update` saves all three together through HTMX and shows
+    "Saved ✓" inline. Errors appear under their fields (new shared
+    `templates/partials/field_errors.html`) and nothing is saved. Without
+    JavaScript it redirects with a toast, or shows the full page with
+    errors.
+  - `entry_remove` deletes the entry (the shared `Book` row is kept),
+    then goes to My Shelf with a toast. A `<dialog>` confirms first
+    (`data-confirm-dialog` in `app.js`); without JavaScript the form just
+    submits. The exact notes count waits for Phase 7.
+  - `_get_own_entry()` scopes every detail route to the logged-in user,
+    so other users' entries are 404.
+  - Shelf row titles, Currently Reading strip cards, and Search's
+    "✓ On your shelf" now link to the detail page; My Shelf stays
+    highlighted in the navbar there.
+  - TDD for all three chosen behaviors, then normal tests for page
+    content, the date cap, invalid status and rating, non-HTMX saves,
+    removal, POST-only routes, login redirects, the themed 404, and the
+    links: 216 tests passing, Ruff clean.
+- **Deviations:**
+  - All three proposed TDD behaviors were accepted as proposed.
+  - The Remove from shelf and Clear (rating) buttons were restyled with
+    outlines, and the gap under "Back to My Shelf" was raised from 16px
+    to 24px, then to 32px, at the user's request.
+- **Sideways:**
+  - The unstyled 404 the user saw was Django's debug page (`.env` has
+    `DJANGO_DEBUG=true`), not a bug. The themed page only shows with
+    debug off, as planned in Phase 1. A test was added to check the
+    themed 404 for another user's entry with debug off, and the user was
+    shown how to check it with `runserver --insecure`.
+  - Linking row titles broke the Phase 5 `listed_titles()` test helper,
+    and three Search/save tests still expected the Phase 4 placeholder
+    link (`/shelf/#entry-N`). Both were fixed mechanically; what they
+    assert did not change.
+  - Two new form-state assertions first depended on template whitespace;
+    they were rewritten as a small regex helper before finishing.
+
 ## 2026-11-14 — Implemented Phase 5: Shelf browsing
 
 ### Prompts

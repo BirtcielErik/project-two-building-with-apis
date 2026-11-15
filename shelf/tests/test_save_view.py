@@ -59,7 +59,7 @@ def test_save_adds_the_book_as_to_be_read_and_swaps_in_on_your_shelf(
     html = response.content.decode()
     assert response.status_code == 200
     assert "data-on-shelf" in html
-    assert f'href="/shelf/#entry-{entry.pk}"' in html
+    assert f'href="/shelf/{entry.pk}/"' in html
     assert 'hx-post="/search/save/"' not in html  # the Save button is gone
 
 
@@ -160,7 +160,7 @@ def test_saving_a_book_already_on_the_shelf_just_shows_on_your_shelf(
         SAVE_URL, {"work_key": "OL893415W"}, headers=HTMX_HEADERS
     ).content.decode()
 
-    assert f'href="/shelf/#entry-{entry.pk}"' in html
+    assert f'href="/shelf/{entry.pk}/"' in html
     assert "Saved “" not in html  # no success toast: nothing new was saved
     assert ShelfEntry.objects.count() == 1
     assert get_work_calls == []

@@ -1,0 +1,62 @@
+{% comment %}
+  The "Your reading" form on the book detail page: status, rating, and finished date,
+  saved together with one button. Include with:
+  - entry: the ShelfEntry being edited.
+  - form: a ShelfEntryForm for it (bound after a save, so errors can show).
+  - saved (optional): true right after a successful save, to show "Saved ✓".
+
+  Without JavaScript the form posts normally. With HTMX it posts in the
+  background and the server sends back this whole form to replace it.
+{% endcomment %}
+<form id="reading-form" method="post" action="{% url 'shelf:entry_update' entry.pk %}"
+      hx-post="{% url 'shelf:entry_update' entry.pk %}" hx-target="this" hx-swap="outerHTML"
+      hx-indicator="#reading-spinner" hx-disabled-elt="find button[type='submit']"
+      class="space-y-5">
+  {% csrf_token %}
+
+  <fieldset>
+    <legend class="text-xs font-semibold uppercase tracking-wide text-base-content/60 mb-2">Status</legend>
+    {# DaisyUI draws each radio as a button, labelled by its aria-label. #}
+    <div class="join flex-wrap">
+      {% for choice in form.status_choices %}
+        <input type="radio" name="status" value="{{ choice.value }}" aria-label="{{ choice.short }}"
+               title="{{ choice.label }}" class="join-item btn btn-sm sm:btn-md"{% if choice.checked %} checked{% endif %}>
+      {% endfor %}
+    </div>
+    {% include "partials/field_errors.html" with errors=form.status.errors %}
+  </fieldset>
+
+  <fieldset>
+    <legend class="text-xs font-semibold uppercase tracking-wide text-base-content/60 mb-2">Your rating</legend>
+    <div class="flex items-center gap-3">
+      <div class="rating rating-md">
+        {# The hidden "no rating" choice; Clear selects it (see assets/js/app.js). #}
+        <input type="radio" name="rating" value="" class="rating-hidden" aria-label="No rating"{% if not form.rating_value %} checked{% endif %}>
+        {% for star in "12345" %}
+          <input type="radio" name="rating" value="{{ star }}" class="mask mask-star-2 bg-warning"
+                 aria-label="{{ star }} star{{ star|pluralize }}"{% if form.rating_value == star %} checked{% endif %}>
+        {% endfor %}
+      </div>
+      <button type="button" class="btn btn-outline btn-xs" data-clear-rating>Clear</button>
+    </div>
+    {% include "partials/field_errors.html" with errors=form.rating.errors %}
+  </fieldset>
+
+  <fieldset>
+    <legend class="text-xs font-semibold uppercase tracking-wide text-base-content/60 mb-2">
+      Finished on <span class="normal-case font-normal">(optional)</span>
+    </legend>
+    {{ form.finished_on }}
+    {% include "partials/field_errors.html" with errors=form.finished_on.errors %}
+  </fieldset>
+
+  {% include "partials/field_errors.html" with errors=form.non_field_errors %}
+
+  <div class="flex items-center gap-3">
+    <button type="submit" class="btn btn-primary btn-sm">
+      <span id="reading-spinner" class="loading loading-spinner loading-xs htmx-indicator" aria-hidden="true"></span>
+      Save
+    </button>
+    {% if saved %}<span class="text-success text-sm" role="status" data-saved>Saved ✓</span>{% endif %}
+  </div>
+</form>

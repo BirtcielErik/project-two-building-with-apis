@@ -79,6 +79,27 @@ document.addEventListener("click", (event) => {
   button.setAttribute("aria-expanded", String(!hidden));
 });
 
+// --- Book detail page ----------------------------------------------------------
+// The rating's "Clear" button picks the hidden "no rating" star (value ""),
+// so the next Save removes the rating.
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-clear-rating]");
+  if (!button) return;
+  const noRating = button.form.querySelector('input[name="rating"][value=""]');
+  if (noRating) noRating.checked = true;
+});
+
+// A form marked [data-confirm-dialog="<dialog id>"] asks first: submitting it
+// opens that <dialog> instead. The dialog's button marked [data-confirmed]
+// submits the form for real. Without JavaScript the form just submits.
+document.addEventListener("submit", (event) => {
+  const form = event.target;
+  const dialogId = form.getAttribute("data-confirm-dialog");
+  if (!dialogId || event.submitter?.hasAttribute("data-confirmed")) return;
+  event.preventDefault();
+  document.getElementById(dialogId).showModal();
+});
+
 // Covers that already failed before this script ran.
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("img[data-cover]").forEach((img) => {

@@ -1,0 +1,7 @@
+{% comment %}
+  A field's error messages, shown right under it until the user fixes them.
+  Usage: {% include "partials/field_errors.html" with errors=form.finished_on.errors %}
+{% endcomment %}
+{% for error in errors %}
+  <p class="text-error text-sm mt-1" role="alert" data-field-error>{{ error }}</p>
+{% endfor %}

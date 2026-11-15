@@ -280,7 +280,7 @@ def test_results_already_on_the_shelf_say_so_with_one_query(
         html = logged_in_client.get("/search/?q=book", headers=HTMX_HEADERS).content.decode()
 
     assert html.count("data-on-shelf") == 1
-    assert f'href="/shelf/#entry-{saved.pk}"' in html
+    assert f'href="/shelf/{saved.pk}/"' in html
     assert 'name="work_key" value="OL1W"' not in html
     assert 'name="work_key" value="OL2W"' in html
     assert 'name="work_key" value="OL3W"' in html

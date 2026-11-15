@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 
-from shelf import openlibrary
+from shelf import openlibrary, saving
 from shelf.models import Book, ShelfEntry
 
 
@@ -27,11 +27,57 @@ class BookSerializer(serializers.ModelSerializer):
 
 
 class ShelfEntrySerializer(serializers.ModelSerializer):
-    """One book on the requesting user's shelf, with the user's reading details."""
+    """One book on the requesting user's shelf, with the user's reading details.
+
+    To create an entry the client sends only ``work_key`` (plus optional
+    ``status``, ``rating``, and ``finished_on``). The server looks the book up
+    itself, so nobody can fake the book details that every user shares. The
+    entry always belongs to the requesting user; there is no ``user`` field.
+    """
 
     book = BookSerializer(read_only=True)
+    work_key = serializers.CharField(write_only=True)
 
     class Meta:
         model = ShelfEntry
-        fields = ["id", "book", "status", "rating", "finished_on", "added_at", "updated_at"]
+        fields = [
+            "id",
+            "book",
+            "work_key",
+            "status",
+            "rating",
+            "finished_on",
+            "added_at",
+            "updated_at",
+        ]
         read_only_fields = ["id", "added_at", "updated_at"]
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        """Build the serializer; ``work_key`` is required only when creating an entry."""
+        super().__init__(*args, **kwargs)
+        if self.instance is not None:
+            self.fields["work_key"].required = False
+
+    def validate_work_key(self, value: str) -> str:
+        """Allow ``work_key`` only when creating an entry.
+
+        An existing entry (and its notes) always stays about the same book, so
+        sending ``work_key`` on an update is an error rather than being quietly
+        ignored.
+        """
+        if self.instance is not None:
+            raise serializers.ValidationError(
+                "An entry's book can't be changed. Remove it and add the other book instead."
+            )
+        return value
+
+    def create(self, validated_data: dict) -> ShelfEntry:
+        """Save the book to the requesting user's shelf through the shared save flow."""
+        user = self.context["request"].user
+        return saving.save_to_shelf(
+            user,
+            validated_data["work_key"],
+            status=validated_data.get("status", ShelfEntry.Status.TO_BE_READ),
+            rating=validated_data.get("rating"),
+            finished_on=validated_data.get("finished_on"),
+        )

@@ -28,6 +28,74 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-14 — Implemented Phase 10: API entry writes
+
+### Prompts
+1. `/implement @prd/one-more-chapter.md @plans/one-more-chapter.md Implement Phase 10`
+2. Are they any major authorization issues at stake in this phase?
+   *(asked before approving the TDD behaviors: create takes only a work
+   key and the server supplies the book details; Open Library failures map
+   to 503/502; `work_key` on update is a 400)*
+3. yes, approved with that addition *(add a faked `user` field to
+   behavior 1's request body)*
+4. approved, go ahead *(RED test for behavior 1)*
+5. yes, go ahead with behavior 2
+6. approved, go ahead *(RED test for behavior 2)*
+7. yes, go ahead with behavior 3
+8. approved, go ahead *(RED test for behavior 3)*
+9. yes, go ahead with the rest of the phase
+10. manual checks pass, go ahead and finish the phase
+
+### Summary
+- **Outcome:** Built Phase 10 of the plan:
+  - `ShelfEntryViewSet` is now a full `ModelViewSet`: POST, PUT, PATCH,
+    and DELETE on `/api/entries/`, still scoped to `request.user` in
+    `get_queryset()`, so every method on another user's entry is a 404.
+  - `ShelfEntrySerializer` gained a write-only `work_key`, required only
+    on create. `create()` goes through the shared `save_to_shelf()`,
+    which now also takes optional `rating` and `finished_on`. The entry
+    always belongs to the caller (there is no `user` field), and book
+    details always come from Open Library or the existing `Book` row,
+    never from the client. `validate_work_key()` makes a `work_key` on
+    update a field-level 400, rejecting the whole request.
+  - `perform_create()` maps `SaveError` (bad format, unknown, duplicate)
+    to a 400 on `work_key`, `OpenLibraryUnavailable` to a 503, and
+    `OpenLibraryBadResponse` to a 502 (new `OpenLibraryUnavailableError`
+    and `OpenLibraryBadResponseError` with fixed "try again later"
+    messages). Rating and finished-date rules come from the model's
+    validators, so the API's messages match the website form.
+  - TDD for all three behaviors, then normal tests for bad-format and
+    duplicate keys (no outbound call), missing and unknown keys, the
+    default status, saving a known book while Open Library is down,
+    invalid rating/status/date on create and update, PUT and PATCH
+    (including clearing a rating), no Open Library calls on update,
+    DELETE removing notes but keeping the `Book`, 404 for all four
+    methods on another user's entry, and 401 for unauthenticated writes.
+    The suite grew from 306 to 342 tests. CLAUDE.md lists the new API
+    error classes.
+- **Deviations:** Before approving the TDD behaviors, the user asked
+  whether the phase raised major authorization issues. I listed six
+  (cross-user writes, mass assignment of `user`, faked shared book data,
+  repointing an entry, CSRF on session writes, unauthenticated writes)
+  plus the throttling gap until Phase 11. I suggested folding a faked
+  `user` field into behavior 1's test, and the user approved that
+  addition. All three RED tests were approved without changes.
+- **Sideways:**
+  - Behavior 2's first RED run crashed instead of failing an assertion,
+    because Django's test client re-raises uncaught view exceptions. The
+    test now sets `raise_request_exception = False`, so it sees the 500 a
+    real client would get and fails on `500 == 503` / `500 == 502`. This
+    was disclosed with the RED test.
+  - After behavior 1, `work_key` was a required field, so a correct PUT
+    (without it) would have failed. This was flagged at the time and fixed
+    in the normal implementation by making it required only on create.
+  - The first draft of the validation tests used an awkward placeholder
+    for the future date; it was rewritten with a `_with_dates()` helper
+    before running. Ruff's format check flagged one test signature, which
+    was rejoined by hand with the Edit tool.
+  - When finishing, the first PROMPTS.md edit failed (wrong indentation
+    in the matched text). It was retried before anything was committed.
+
 ## 2026-11-14 — Implemented Phase 9: API read access with tokens
 
 ### Prompts

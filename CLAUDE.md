@@ -46,7 +46,7 @@ A Django web app and REST API for keeping a personal bookshelf of Open Library b
 - `shelf/templates/shelf/partials/`: `book_row.html` (needs a `notes_count` annotation), `cover.html`, `stars.html`, `status_badge.html`
 - `templates/partials/`: `field_errors.html`, `toasts.html` (`oob=True` in HTMX responses)
 - `shelf/templatetags/shelf_extras.py`: `cover_url` filter
-- `shelf/api.py` (`ShelfEntryViewSet`, scoped in `get_queryset()`), `shelf/serializers.py`, `shelf/api_urls.py` (DRF router under `/api/`)
+- `shelf/api.py` (`ShelfEntryViewSet`, scoped in `get_queryset()`; `OpenLibraryUnavailableError` 503 / `OpenLibraryBadResponseError` 502), `shelf/serializers.py` (`work_key` is create-only), `shelf/api_urls.py` (DRF router under `/api/`)
 - `assets/js/app.js`: `data-copy-target` (copies `data-secret` if present), `data-reveal-target` (masked secrets)
 
 ## Conventions

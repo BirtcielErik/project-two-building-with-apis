@@ -4,6 +4,7 @@ The website (Search page) and the API both save books through
 ``save_to_shelf``, so the rules are identical everywhere.
 """
 
+import datetime
 import re
 
 from django.contrib.auth.models import AbstractBaseUser
@@ -44,9 +45,17 @@ def is_valid_work_key(work_key: str) -> bool:
 
 
 def save_to_shelf(
-    user: AbstractBaseUser, work_key: str, status: str = ShelfEntry.Status.TO_BE_READ
+    user: AbstractBaseUser,
+    work_key: str,
+    status: str = ShelfEntry.Status.TO_BE_READ,
+    rating: int | None = None,
+    finished_on: datetime.date | None = None,
 ) -> ShelfEntry:
-    """Save the work ``work_key`` to ``user``'s shelf with ``status`` and return the new entry.
+    """Save the work ``work_key`` to ``user``'s shelf and return the new entry.
+
+    ``status``, ``rating``, and ``finished_on`` become the entry's reading
+    details. The caller checks rating and finished date beforehand (the API
+    serializer does this with the model's own validators).
 
     Cheap checks run first, so a bad request never costs a call to Open Library:
 
@@ -75,7 +84,9 @@ def save_to_shelf(
     try:
         # A savepoint, so a failed insert doesn't break the surrounding transaction.
         with transaction.atomic():
-            return ShelfEntry.objects.create(user=user, book=book, status=status)
+            return ShelfEntry.objects.create(
+                user=user, book=book, status=status, rating=rating, finished_on=finished_on
+            )
     except IntegrityError:
         # A double-click raced past the duplicate check above.
         raise AlreadyOnShelf(ShelfEntry.objects.get(user=user, book=book)) from None

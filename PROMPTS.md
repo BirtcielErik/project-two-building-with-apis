@@ -28,6 +28,78 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-15 — Explored the API and added a command-line API client script
+
+### Prompts
+1. Show me the API endpoints in my project in table format. Choose a list
+   endpoint and a related detail endpoint for me to open in the browser.
+   Explain any authentication needed and give me the URLs for viewing JSON.
+2. Walk me through the api/entries/149 endpoint. Show me the associated
+   model, serializer, and view.
+3. *(pasted)* Create a Python script in the scripts/ directory that
+   consumes my projects API. The script should have two behaviors:
+   1. Call one list endpoint with query parameters and print the results.
+   2. Call one update endpoint that updates one field through the API.
+      Print the before and after results.
+4. How do I run and test the script?
+5. Please add setup and run instructions for this script to README.md
+6. README.md currently has no information about the seed command - please
+   add it
+
+### Summary
+- **Outcome:**
+  - Explained the API: a table of every endpoint, then `/api/entries/`
+    and `/api/entries/149/` (demo_maya's *Project Hail Mary*) as the
+    list/detail pair to open in the browser. Covered session login vs.
+    token auth, and `?format=json` for raw JSON vs. DRF's browsable API.
+    Walked through entry 149 from URL routing to `ShelfEntry`/`Book`, then
+    `ShelfEntryViewSet` (auth, permission, throttle, owner-scoped
+    `get_queryset()`, 404 from `get_object()`), then `ShelfEntrySerializer`
+    and the nested `BookSerializer` (`source=`, `SerializerMethodField`,
+    write-only `work_key`), using the real JSON for that entry.
+  - Added `scripts/shelf_api_client.py` (uses `requests`, the token sent as
+    an `Authorization: Token` header, with docstrings and type hints).
+    `list` calls `GET /api/entries/` with `--q`, `--status`,
+    `--min-rating`, `--rated`, `--ordering`, and `--page`. `update <id>
+    <field> <value>` GETs the entry (before), PATCHes one field (`status`,
+    `rating`, or `finished_on`; `none` clears it), and prints the PATCH
+    response (after). Errors (400, 401, 404, 429, no server, no token) print
+    a readable message and exit 1. The token and optional base URL come
+    from `SHELF_API_TOKEN` / `SHELF_API_URL`, added blank to
+    `.env.example`.
+  - README: a new "API client script" section (setup, run examples,
+    options, a manual test table), the two new variables in the
+    Configuration table, and a new "Demo data" section for `manage.py
+    seed` (logins, offline, safe to rerun, IDs change on each run, local
+    use only).
+  - Tested by running the script against a temporary dev server on port
+    8765 as demo_maya: list with filters, update, a rating of 9 (400),
+    Theo's entry (404), and no token. The script has no automated tests;
+    adding `responses`-based tests was offered but not requested. `scripts/`
+    is excluded from Ruff. Nothing was committed.
+- **Deviations:** No recommendations were overridden. I chose the script's
+  design without asking: a `list`/`update` command-line interface, the
+  token read from `.env`, and three updatable fields instead of one fixed
+  field. Prompts 2 and 4 were follow-up questions. Prompts 5 and 6 asked
+  for docs. Prompt 6 caught a gap I had missed: the README had never
+  documented `seed`, even though my script instructions told the reader
+  to run it.
+- **Sideways:**
+  - The first test run crashed with `UnicodeEncodeError`: the Windows
+    console (cp1252) can't print the `★` rating stars. Changed to `4/5`.
+  - Because of that crash, a test PATCH (`rating 4` on entry 149) went
+    through, but its "revert" crashed before sending its PATCH. That left
+    demo_maya's real dev data changed until the fix was rerun. The entry
+    was restored (status reading, no rating), but its `updated_at` changed.
+    The tests modified the user's dev database without asking first.
+  - Self-review caught a bug: a blank `SHELF_API_URL=` line (as in
+    `.env.example`) would have produced an empty base URL instead of the
+    default. Fixed with an `or DEFAULT_API_URL` fallback.
+  - Reading `seed.py` for prompt 6 showed that reseeding deletes and
+    re-creates entries, so IDs change. The script docs written in prompt 5
+    used entry 149 and suggested reseeding to undo test changes without
+    mentioning this. The README now says so in both places.
+
 ## 2026-11-14 — Implemented Phase 11: API notes, public shared API, and throttling
 
 ### Prompts

@@ -28,6 +28,54 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-15 — Walked through how My Shelf searches, filters, sorts, and paginates
+
+### Prompts
+1. Walk me through how My Shelf searches and displays data. Start with the
+   browser controls, then trace the request, view, queryset, Q objects,
+   filters, sorting, pagination, and template. Show the relevant files and
+   explain one part at a time. Identify whether the data comes from our
+   database or an external API. Explain the existing code without changing
+   it.
+2. Append a session log to PROMPTS.md at the repo root, under today's date,
+   newest entry at the top. Record every prompt I gave you this session, in
+   order, including any corrections. End the entry with a short summary:
+   the outcome, any places where I deviated from a recommended answer or
+   asked follow-up questions, and anything that went sideways.
+
+### Summary
+- **Outcome:**
+  - Explained the My Shelf flow in 11 steps, following one example
+    (`?q=dune&status=finished&ordering=-rating`) the whole way through:
+    - Browser controls: the one GET form in `my_shelf.html` and
+      `shelf_sidebar.html`, its HTMX attributes (300 ms debounce, `hx-target`,
+      `hx-push-url`, `hx-sync`), and the `app.js` helpers for dropping empty
+      parameters and clearing filters.
+    - Routing in `shelf/urls.py`.
+    - The view's starting queryset in `shelf/views.py`: scoped to
+      `request.user.shelf_entries`, with `select_related("book")` and the
+      `notes_count` annotation, plus why `TIEBREAK_ORDERING` is reapplied.
+    - `ShelfEntryFilter` in `shelf/filters.py`, comparing declarative and
+      custom-method filters.
+    - The `Q(...) | Q(...)` title-or-author search.
+    - `NullsLastOrderingFilter` and its tiebreak ordering.
+    - `Paginator`, which is where the SQL actually runs, and `page_links()`.
+    - The sidebar counts, which cover the whole shelf rather than the
+      filtered list.
+    - `render_page_or_partial()` choosing the full page or the partial.
+    - The `shelf_results.html`, `book_row.html`, and `pagination.html`
+      templates.
+  - Data source: everything comes from the local SQLite database. `Book` is a
+    snapshot taken when a book is saved. The only external request is for
+    cover images, which the browser loads from Open Library's covers server
+    using a URL built by the `cover_url` filter. The server makes no network
+    call. The Search page, by contrast, calls Open Library live.
+  - No code was changed, as requested. Offered a follow-up: printing the
+    generated SQL with `str(filterset.qs.query)`.
+- **Deviations:** None. No recommendations were offered, and no follow-up
+  questions were asked.
+- **Sideways:** Nothing went wrong.
+
 ## 2026-11-15 — Explored the API and added a command-line API client script
 
 ### Prompts

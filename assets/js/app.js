@@ -120,6 +120,27 @@ document.addEventListener("htmx:confirm", (event) => {
   dialog.showModal();
 });
 
+// --- Profile page ----------------------------------------------------------------
+// A [data-copy-target="<input id>"] button copies that input's text to the
+// clipboard and briefly says "Copied ✓". If the clipboard isn't available
+// (some browsers block it on plain http), the text is selected instead so
+// the user can press Ctrl+C.
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-copy-target]");
+  if (!button) return;
+  const input = document.getElementById(button.getAttribute("data-copy-target"));
+  if (!input) return;
+  const label = button.textContent;
+  try {
+    await navigator.clipboard.writeText(input.value);
+    button.textContent = "Copied ✓";
+  } catch {
+    input.select();
+    button.textContent = "Press Ctrl+C";
+  }
+  setTimeout(() => (button.textContent = label), 2000);
+});
+
 // Covers that already failed before this script ran.
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("img[data-cover]").forEach((img) => {

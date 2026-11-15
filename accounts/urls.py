@@ -23,4 +23,8 @@ urlpatterns = [
     # Django's LogoutView only accepts POST, so logging out can't be triggered by a link.
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("profile/", views.profile, name="profile"),
+    path("profile/display-name/", views.display_name_update, name="display_name_update"),
+    path("profile/share/create/", views.share_create, name="share_create"),
+    path("profile/share/regenerate/", views.share_regenerate, name="share_regenerate"),
+    path("profile/share/disable/", views.share_disable, name="share_disable"),
 ]

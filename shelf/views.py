@@ -3,12 +3,15 @@
 import logging
 
 from django.contrib import messages
+from django.contrib.auth import get_user_model
+from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Count
-from django.http import HttpRequest, HttpResponse
+from django.db.models import Count, F
+from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.cache import patch_vary_headers
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
@@ -238,6 +241,85 @@ def note_delete(request: HttpRequest, pk: int, note_pk: int) -> HttpResponse:
 def _notes_context(entry: ShelfEntry, note_form: NoteForm) -> dict[str, object]:
     """Return what the notes section needs: the entry, its notes (newest first), the add form."""
     return {"entry": entry, "notes": list(entry.notes.all()), "note_form": note_form}
+
+
+# The shared shelf's groups, in the order they're shown, each with its sort order.
+# Finished books show the most recently finished first (books with no date last);
+# the other groups show the most recently added first.
+SHARED_GROUPS: list[tuple[str, tuple[object, ...]]] = [
+    (ShelfEntry.Status.READING, TIEBREAK_ORDERING),
+    (ShelfEntry.Status.FINISHED, (F("finished_on").desc(nulls_last=True), *TIEBREAK_ORDERING)),
+    (ShelfEntry.Status.TO_BE_READ, TIEBREAK_ORDERING),
+    (ShelfEntry.Status.DID_NOT_FINISH, TIEBREAK_ORDERING),
+]
+# How many books each group shows at first, and how many each "Show more" adds.
+SHARED_GROUP_SIZE = 12
+
+
+def shared_shelf(request: HttpRequest, share_token: str) -> HttpResponse:
+    """Show a user's shelf, read-only, to anyone who has its share link.
+
+    No login is needed. A token that doesn't match any user (wrong, regenerated,
+    or disabled) is "not found". Books are grouped by status, empty groups are
+    left out, and each group shows ``SHARED_GROUP_SIZE`` books at first.
+
+    "Show more" asks for ``?group=<status>&page=<n>``:
+
+    - HTMX requests get just that group's next books (and the next "Show more").
+    - Normal requests (no JavaScript) get the full page with that group showing
+      its first ``n`` pages of books.
+
+    Only book details, statuses, ratings, and finished dates reach the
+    template: never notes, the username, or the user's ID.
+    """
+    owner = get_object_or_404(get_user_model(), share_token=share_token)
+    counts = status_counts(owner.shelf_entries.all())
+    requested_group = request.GET.get("group", "")
+    page = _parse_page(request.GET.get("page"))
+
+    if is_htmx(request):
+        ordering = dict(SHARED_GROUPS).get(requested_group)
+        if ordering is None:
+            raise Http404("No such group.")
+        start = (page - 1) * SHARED_GROUP_SIZE
+        group = _shared_group(owner, requested_group, ordering, counts, start, page)
+        return render(request, "shelf/partials/shared_items.html", {"group": group})
+
+    groups = []
+    for status, ordering in SHARED_GROUPS:
+        if counts.get(status):
+            pages_shown = page if status == requested_group else 1
+            groups.append(_shared_group(owner, status, ordering, counts, 0, pages_shown))
+
+    context = {"display_name": owner.display_name, "groups": groups}
+    response = render(request, "shelf/shared_shelf.html", context)
+    patch_vary_headers(response, ["HX-Request"])
+    return response
+
+
+def _shared_group(
+    owner: AbstractBaseUser,
+    status: str,
+    ordering: tuple[object, ...],
+    counts: dict[str, int],
+    start: int,
+    pages_shown: int,
+) -> dict[str, object]:
+    """Return one group of the shared shelf: its books from ``start`` up to page ``pages_shown``.
+
+    ``next_page`` is the page "Show more" should ask for, or ``None`` when
+    every book in the group is already shown.
+    """
+    stop = pages_shown * SHARED_GROUP_SIZE
+    entries = owner.shelf_entries.filter(status=status).select_related("book").order_by(*ordering)
+    total = counts.get(status, 0)
+    return {
+        "status": status,
+        "label": ShelfEntry.Status(status).label,
+        "total": total,
+        "entries": list(entries[start:stop]),
+        "next_page": pages_shown + 1 if total > stop else None,
+    }
 
 
 @login_required

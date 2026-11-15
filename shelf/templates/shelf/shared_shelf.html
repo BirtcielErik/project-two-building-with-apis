@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% comment %}
+  The public, read-only shared shelf. Include with:
+  - display_name: the owner's display name ("" when they haven't set one).
+  - groups: the non-empty status groups, in order (see shared_shelf in shelf/views.py).
+
+  Privacy: this page only ever gets book details, statuses, ratings, and
+  finished dates. It never shows notes, the username, or the user ID, and it
+  has no forms or edit controls.
+{% endcomment %}
+
+{% block title %}{% if display_name %}{{ display_name }} · Shared bookshelf{% else %}A shared bookshelf{% endif %} · One More Chapter{% endblock %}
+
+{# Share links are private-by-obscurity, so ask search engines not to list them. #}
+{% block head %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8 space-y-10">
+  <header>
+    {% if display_name %}
+      <p class="text-sm font-semibold uppercase tracking-wide text-primary">Shared bookshelf</p>
+      <h1 class="text-3xl font-bold break-words">{{ display_name }}</h1>
+    {% else %}
+      <h1 class="text-3xl font-bold">A shared bookshelf</h1>
+    {% endif %}
+    <p class="text-base-content/70 mt-1">A read-only view of what's on this shelf.</p>
+  </header>
+
+  {% for group in groups %}
+    <section id="group-{{ group.status }}" aria-labelledby="group-{{ group.status }}-heading" data-shared-group="{{ group.status }}">
+      <h2 id="group-{{ group.status }}-heading" class="text-xl font-semibold mb-4">
+        {{ group.label }} <span class="text-base font-normal text-base-content/50">({{ group.total }})</span>
+      </h2>
+      <ul class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-6">
+        {% include "shelf/partials/shared_items.html" %}
+      </ul>
+    </section>
+  {% empty %}
+    <div class="text-center py-16 bg-base-200 rounded-box text-base-content/60" data-shared-empty>
+      <p class="text-4xl" aria-hidden="true">📚</p>
+      <p class="mt-2">This shelf doesn't have any books yet.</p>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

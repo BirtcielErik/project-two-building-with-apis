@@ -1,0 +1,6 @@
+{% comment %}
+  HTMX response to saving the display name: the updated card, plus the toast
+  container swapped "out of band" so the confirmation toast appears.
+{% endcomment %}
+{% include "accounts/partials/display_name_card.html" %}
+{% include "partials/toasts.html" with oob=True %}

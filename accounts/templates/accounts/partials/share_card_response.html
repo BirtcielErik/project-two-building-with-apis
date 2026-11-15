@@ -1,0 +1,6 @@
+{% comment %}
+  HTMX response to a share-link action: the updated share card, plus the
+  toast container swapped "out of band" so the confirmation toast appears.
+{% endcomment %}
+{% include "accounts/partials/share_card.html" %}
+{% include "partials/toasts.html" with oob=True %}

@@ -41,3 +41,25 @@ class SignupForm(DaisyFormMixin, UserCreationForm):
 
 class LoginForm(DaisyFormMixin, AuthenticationForm):
     """Django's built-in login form, styled with DaisyUI."""
+
+
+class DisplayNameForm(DaisyFormMixin, forms.ModelForm):
+    """The Profile page's form for the optional name shown on the shared shelf.
+
+    Leaving it blank is allowed: the shared shelf then says "A shared bookshelf".
+    Extra spaces around the name are removed automatically.
+    """
+
+    class Meta:
+        model = User
+        fields = ("display_name",)
+        labels = {"display_name": "Display name"}
+        help_texts = {
+            "display_name": "Shown on your shared shelf instead of your username. "
+            "Leave it blank to show “A shared bookshelf”.",
+        }
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        """Build the form and add a placeholder to the name box."""
+        super().__init__(*args, **kwargs)
+        self.fields["display_name"].widget.attrs["placeholder"] = "e.g. Maya"

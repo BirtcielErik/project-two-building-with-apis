@@ -1,0 +1,26 @@
+{% comment %}
+  The Profile page's "Display name" card. Include with:
+  - name_form: a DisplayNameForm (bound after a failed save, so the error shows).
+
+  With HTMX, saving posts in the background and the server sends back this
+  whole card. Without JavaScript the form posts normally.
+{% endcomment %}
+<section id="display-name-card" class="card bg-base-200" aria-labelledby="display-name-heading">
+  <div class="card-body gap-2">
+    <h2 id="display-name-heading" class="card-title">Display name</h2>
+    {# novalidate: skip the browser's own popups, so our styled error shows instead. #}
+    <form method="post" action="{% url 'accounts:display_name_update' %}"
+          hx-post="{% url 'accounts:display_name_update' %}" hx-target="#display-name-card" hx-swap="outerHTML"
+          hx-indicator="#display-name-spinner" hx-disabled-elt="find button[type='submit']"
+          novalidate>
+      {% csrf_token %}
+      {% include "partials/form_field.html" with field=name_form.display_name %}
+      <div class="flex justify-end mt-2">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <span id="display-name-spinner" class="loading loading-spinner loading-xs htmx-indicator" aria-hidden="true"></span>
+          Save
+        </button>
+      </div>
+    </form>
+  </div>
+</section>

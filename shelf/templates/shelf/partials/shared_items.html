@@ -1,0 +1,33 @@
+{% comment %}
+  One batch of books in a shared-shelf group, as <li> items for the group's
+  grid, followed by a "Show more" item when more books remain. Include with:
+  - group: a dict from _shared_group() in shelf/views.py (status, entries, next_page).
+
+  "Show more" is a plain link to ?group=…&page=…, so it works without
+  JavaScript. With HTMX it fetches just the next batch, which replaces the
+  "Show more" item, so the new books are added to the end of the grid.
+{% endcomment %}
+{% for entry in group.entries %}
+  <li data-shared-book>
+    {% include "shelf/partials/cover.html" with cover_id=entry.book.cover_id title=entry.book.title size="M" classes="w-full aspect-[2/3] rounded-lg shadow" %}
+    <p class="font-semibold leading-tight mt-2 line-clamp-2 break-words">{{ entry.book.title }}</p>
+    <p class="text-xs text-base-content/60 truncate">{{ entry.book.authors_display|default:"Unknown author" }}</p>
+    <div class="mt-1 text-sm">{% include "shelf/partials/stars.html" with rating=entry.rating %}</div>
+    {% if entry.finished_on %}
+      <p class="text-xs text-base-content/50">
+        {% if entry.status == "dnf" %}Stopped{% else %}Finished{% endif %} {{ entry.finished_on|date:"M j, Y" }}
+      </p>
+    {% endif %}
+  </li>
+{% endfor %}
+{% if group.next_page %}
+  <li class="col-span-full flex justify-center" data-show-more>
+    <a href="{{ request.path }}?group={{ group.status }}&amp;page={{ group.next_page }}#group-{{ group.status }}"
+       hx-get="{{ request.path }}?group={{ group.status }}&amp;page={{ group.next_page }}"
+       hx-target="closest li" hx-swap="outerHTML"
+       class="btn btn-outline btn-sm">
+      <span class="loading loading-spinner loading-xs htmx-indicator" aria-hidden="true"></span>
+      Show more
+    </a>
+  </li>
+{% endif %}

@@ -28,6 +28,55 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-14 — Implemented Phase 8: Profile, sharing, and public shared shelf
+
+### Prompts
+1. `/implement @prd/one-more-chapter.md @plans/one-more-chapter.md Implement Phase 8`
+2. Go ahead with 1 and 3 only *(TDD behaviors offered: the shared page
+   never shows notes or the username; groups appear in order with empty
+   ones hidden; regenerating or disabling the link makes the old URL 404)*
+3. Make it pass *(RED test for behavior 1)*
+4. Yes, continue to behavior 3
+5. Make it pass *(RED test for behavior 3)*
+6. Yes, continue with the rest of the phase
+7. Manual checks pass, finish the phase
+
+### Summary
+- **Outcome:** Built Phase 8 of the plan:
+  - Profile page with a **Display name** card (`DisplayNameForm`; saves in
+    place with a toast, blank allowed, over-80-character names get an
+    inline error) and a **Share your bookshelf** card that switches between
+    "Create share link" and the full URL with Copy, Open, Regenerate, and
+    Disable. Regenerate and Disable ask first through themed dialogs
+    (`data-htmx-confirm`). All actions are HTMX POSTs with no-JS fallbacks.
+  - Copy button script (`data-copy-target` in `app.js`), ready for the
+    Phase 9 API token card. It falls back to selecting the text if the
+    clipboard is blocked.
+  - Public `/shared/<token>/` page: no login, display name heading (or "A
+    shared bookshelf"), groups in order (Currently Reading, Finished by
+    most recent date with undated last, To Be Read, Did Not Finish), empty
+    groups hidden, cover grid with stars and finished dates, 12 per group
+    with an HTMX "Show more" that replaces itself with the next batch.
+    "Show more" is a real link (`?group=&page=`), so it works without
+    JavaScript. Unknown tokens and groups are 404. Added a `noindex` meta
+    tag through a new `head` block in `base.html`.
+  - TDD for behaviors 1 and 3, then normal tests for the rest (275 tests).
+- **Deviations:** Chose TDD for only behaviors 1 and 3, not all three
+  offered (the group ordering was tested normally afterwards). No follow-up
+  questions.
+- **Sideways:**
+  - Behavior 1's RED test needed a positive check (the book title must be
+    on the page) so the privacy assertions couldn't pass against an empty
+    stub. Its user-ID check only looks for a `/users/<id>` pattern, since a
+    bare number would match unrelated text; the API phase can check this
+    more strongly.
+  - The display-name view first used `type(request.user)` to reload the
+    user, which failed because `request.user` is a lazy wrapper. Fixed by
+    using the `User` model directly.
+  - Ruff flagged three long lines; they were rewrapped by hand with the
+    Edit tool rather than running `ruff format`, following the
+    edit-through-diff rule.
+
 ## 2026-11-14 — Implemented Phase 7: Notes and demo seed data
 
 ### Prompts

@@ -1,0 +1,56 @@
+{% comment %}
+  The Profile page's "Share your bookshelf" card. Include with:
+  - share_url: the full shared-shelf URL, or None when sharing is off.
+
+  Every button is an HTMX POST that sends back this whole card (and a toast).
+  Regenerate and Disable ask first, using the dialogs on the Profile page
+  (see data-htmx-confirm in assets/js/app.js). Without JavaScript the forms
+  post normally and the Profile page reloads.
+{% endcomment %}
+<section id="share-card" class="card bg-base-200" aria-labelledby="share-heading">
+  <div class="card-body gap-4">
+    <h2 id="share-heading" class="card-title">Share your bookshelf</h2>
+    <p class="text-sm text-base-content/80">
+      Anyone with your link can see your books, their statuses, your star ratings, and your
+      finished dates. They can't change anything, and they <strong>never see your notes</strong>
+      or your username.
+    </p>
+
+    {% if share_url %}
+      <div class="flex flex-col sm:flex-row gap-2">
+        <label for="share-url" class="sr-only">Your share link</label>
+        <input id="share-url" type="text" value="{{ share_url }}" readonly
+               class="input w-full font-mono text-sm" data-share-url>
+        <div class="flex gap-2 shrink-0">
+          <button type="button" class="btn btn-primary" data-copy-target="share-url">Copy</button>
+          <a href="{{ share_url }}" target="_blank" rel="noopener" class="btn btn-outline">Open ↗</a>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <form method="post" action="{% url 'accounts:share_regenerate' %}"
+              hx-post="{% url 'accounts:share_regenerate' %}" hx-target="#share-card" hx-swap="outerHTML"
+              hx-disabled-elt="find button" data-htmx-confirm="share-regenerate-dialog">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-outline">Regenerate link</button>
+        </form>
+        <form method="post" action="{% url 'accounts:share_disable' %}"
+              hx-post="{% url 'accounts:share_disable' %}" hx-target="#share-card" hx-swap="outerHTML"
+              hx-disabled-elt="find button" data-htmx-confirm="share-disable-dialog">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-outline btn-error">Disable sharing</button>
+        </form>
+      </div>
+    {% else %}
+      <p class="text-sm text-base-content/60" data-sharing-off>Sharing is off. Your shelf is private.</p>
+      <form method="post" action="{% url 'accounts:share_create' %}"
+            hx-post="{% url 'accounts:share_create' %}" hx-target="#share-card" hx-swap="outerHTML"
+            hx-indicator="#share-spinner" hx-disabled-elt="find button">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">
+          <span id="share-spinner" class="loading loading-spinner loading-xs htmx-indicator" aria-hidden="true"></span>
+          Create share link
+        </button>
+      </form>
+    {% endif %}
+  </div>
+</section>

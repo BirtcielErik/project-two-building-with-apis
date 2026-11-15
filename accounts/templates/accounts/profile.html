@@ -4,14 +4,46 @@
 
 {% block content %}
 <div class="max-w-2xl mx-auto px-4 py-8 space-y-6">
-  <h1 class="text-3xl font-bold">Profile</h1>
-  <div class="card bg-base-200 shadow-sm">
-    <div class="card-body">
-      <p>You're logged in as <strong>{{ user.username }}</strong>.</p>
-      <p class="text-base-content/70">
-        Your display name, share link, and API access settings will appear here.
-      </p>
+  <div>
+    <h1 class="text-3xl font-bold">Profile</h1>
+    <p class="text-base-content/70 mt-1">You're logged in as <strong>{{ user.username }}</strong>.</p>
+  </div>
+
+  {% include "accounts/partials/display_name_card.html" %}
+  {% include "accounts/partials/share_card.html" %}
+</div>
+
+{% comment %}
+  Confirmation dialogs for the share card's Regenerate and Disable buttons.
+  They live outside the card, so swapping the card doesn't remove them. Their
+  [data-dialog-confirm] button sends the waiting HTMX request (see assets/js/app.js).
+{% endcomment %}
+<dialog id="share-regenerate-dialog" class="modal" aria-labelledby="share-regenerate-title">
+  <div class="modal-box">
+    <h3 id="share-regenerate-title" class="font-bold text-lg">Make a new share link?</h3>
+    <p class="py-3 text-sm">
+      Your current link will stop working right away. Anyone you sent it to will need the new link.
+    </p>
+    <div class="modal-action">
+      <form method="dialog"><button class="btn btn-ghost">Cancel</button></form>
+      <button type="button" class="btn btn-primary" data-dialog-confirm>Regenerate</button>
     </div>
   </div>
-</div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<dialog id="share-disable-dialog" class="modal" aria-labelledby="share-disable-title">
+  <div class="modal-box">
+    <h3 id="share-disable-title" class="font-bold text-lg">Turn off sharing?</h3>
+    <p class="py-3 text-sm">
+      Your share link will stop working right away and your shelf will be private again.
+      You can create a new link later.
+    </p>
+    <div class="modal-action">
+      <form method="dialog"><button class="btn btn-ghost">Cancel</button></form>
+      <button type="button" class="btn btn-error" data-dialog-confirm>Disable sharing</button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
 {% endblock %}

@@ -16,4 +16,5 @@ urlpatterns = [
     path("shelf/<int:pk>/notes/<int:note_pk>/delete/", views.note_delete, name="note_delete"),
     path("search/", views.search, name="search"),
     path("search/save/", views.save_book, name="save_book"),
+    path("shared/<str:share_token>/", views.shared_shelf, name="shared_shelf"),
 ]

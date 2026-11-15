@@ -46,6 +46,8 @@ A Django web app and REST API for keeping a personal bookshelf of Open Library b
 - `shelf/templates/shelf/partials/`: `book_row.html` (needs a `notes_count` annotation), `cover.html`, `stars.html`, `status_badge.html`
 - `templates/partials/`: `field_errors.html`, `toasts.html` (`oob=True` in HTMX responses)
 - `shelf/templatetags/shelf_extras.py`: `cover_url` filter
+- `shelf/api.py` (`ShelfEntryViewSet`, scoped in `get_queryset()`), `shelf/serializers.py`, `shelf/api_urls.py` (DRF router under `/api/`)
+- `assets/js/app.js`: `data-copy-target` (copies `data-secret` if present), `data-reveal-target` (masked secrets)
 
 ## Conventions
 
@@ -54,6 +56,7 @@ A Django web app and REST API for keeping a personal bookshelf of Open Library b
 - HTMX success: a `*_response.html` wrapper = partial + `toasts.html` with `oob=True`. No-JS fallback: redirect with `messages.success`, or re-render the full page with errors.
 - Confirmations (`assets/js/app.js`): plain forms use `data-confirm-dialog="<dialog id>"`; HTMX forms use `data-htmx-confirm="<dialog id>"`.
 - Forms validated on the server get `novalidate`, so styled errors show instead of browser popups.
+- API auth: `TokenAuthentication` is listed before `SessionAuthentication` so unauthenticated requests get 401 (not 403). API tests use `rest_framework.test.APIClient` with `credentials(HTTP_AUTHORIZATION="Token …")`.
 - `annotate(Count(...))` drops `Meta.ordering`: add `.order_by(*TIEBREAK_ORDERING)`, and keep such annotations off querysets used for other aggregates.
 
 ## References

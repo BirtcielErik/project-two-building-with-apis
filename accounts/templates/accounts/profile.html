@@ -11,6 +11,7 @@
 
   {% include "accounts/partials/display_name_card.html" %}
   {% include "accounts/partials/share_card.html" %}
+  {% include "accounts/partials/api_token_card.html" %}
 </div>
 
 {% comment %}
@@ -42,6 +43,21 @@
     <div class="modal-action">
       <form method="dialog"><button class="btn btn-ghost">Cancel</button></form>
       <button type="button" class="btn btn-error" data-dialog-confirm>Disable sharing</button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<dialog id="api-token-regenerate-dialog" class="modal" aria-labelledby="api-token-regenerate-title">
+  <div class="modal-box">
+    <h3 id="api-token-regenerate-title" class="font-bold text-lg">Make a new API token?</h3>
+    <p class="py-3 text-sm">
+      Your current token will stop working right away. Any scripts or tools using it will
+      need the new token.
+    </p>
+    <div class="modal-action">
+      <form method="dialog"><button class="btn btn-ghost">Cancel</button></form>
+      <button type="button" class="btn btn-error" data-dialog-confirm>Regenerate token</button>
     </div>
   </div>
   <form method="dialog" class="modal-backdrop"><button>close</button></form>

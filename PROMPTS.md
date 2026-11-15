@@ -28,6 +28,71 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-14 — Implemented Phase 9: API read access with tokens
+
+### Prompts
+1. `/implement @prd/one-more-chapter.md @plans/one-more-chapter.md Implement Phase 9`
+2. Only 1 and 3 - 2 can be implemented and tested normally *(TDD behaviors
+   offered: a token sees only its owner's shelf; the API filters the same
+   way My Shelf does; regenerating the API token turns off the old one)*
+3. Make it pass *(RED test for behavior 1)*
+4. Yes, continue to behavior 3
+5. Make it pass *(RED test for behavior 3)*
+6. Yes, continue with the rest of the phase
+7. When clicking the Reveal button, the new hide button loses the outline
+8. Manual checks pass, finish the phase
+9. I do not see an update made to PROMPTS.md yet - that needs to happen
+   before you commit this phase. *(correction: the commit was sent before
+   this log update had succeeded)*
+
+### Summary
+- **Outcome:** Built Phase 9 of the plan:
+  - Added Django REST Framework (3.18.3) with Token and Session
+    authentication, `rest_framework.authtoken`, `IsAuthenticated` by
+    default, the django-filter backend, and 12-per-page pagination.
+  - Read-only `/api/entries/` (list) and `/api/entries/<pk>/` (retrieve)
+    in `shelf/api.py`, routed by a DRF router in `shelf/api_urls.py`. The
+    viewset is scoped to `request.user` in `get_queryset()`, so another
+    user's entry is a 404. The list reuses `ShelfEntryFilter`, so `q`,
+    `status`, `min_rating`, `rated`, `ordering`, and `page` match My
+    Shelf. Invalid filter values return 400.
+  - `shelf/serializers.py`: the entry serializer nests read-only book info
+    (`work_key`, title, authors, first publish year, and a computed
+    `cover_url`, null without a cover ID).
+  - Profile **API access** card: the token is created on the first Profile
+    visit and shown masked except its last 4 characters. It has Reveal/Hide
+    and Copy (`data-reveal-target`, plus `data-copy-target` now copies
+    `data-secret`), and a confirmed Regenerate (HTMX swap + toast, no-JS
+    redirect) that deletes and recreates the token in a transaction.
+  - TDD for behaviors 1 and 3. Normal tests cover 401s without a valid
+    token, browser session access, the nested book and `cover_url`, a
+    12-case website/API parity test, pagination, 400s on invalid filters,
+    no Open Library calls, and the Profile card (masking, HTMX and no-JS
+    regenerate, POST/login required). The suite grew from 276 to 306
+    tests. The README gained an API section, and CLAUDE.md lists the new
+    shared files and the auth-order convention.
+- **Deviations:** Only TDD behaviors 1 and 3 were run, at the user's
+  request. Behavior 2 (website/API parity) was built and tested normally.
+  No follow-up questions were asked.
+- **Sideways:**
+  - With Session authentication listed first, DRF answers a bad token with
+    403 (Session has no auth challenge). This was caught while setting up
+    behavior 3, and Token authentication was moved first so the plan's 401
+    holds.
+  - An Edit matched two places and didn't apply, so the first GREEN run
+    for behavior 3 still failed. It was retried with more context.
+  - A new `cover_url` test expected a URL without `?default=false`. The
+    shared helper adds that on purpose (missing covers 404 instead of a
+    blank image), so the test was corrected, not the code.
+  - During manual checks the user saw the Hide button lose its outline.
+    DaisyUI 5 styles `aria-pressed="true"` buttons as active, filled with
+    the card's own `base-200` color. Fixed by tracking the state in
+    `data-revealed` instead of `aria-pressed`.
+  - When finishing, the PROMPTS.md edit failed (wrong indentation in the
+    matched text), but the commit and push had been sent in the same step
+    without waiting for it. The user stopped the commit before it ran, so
+    nothing was committed without the log. The edit was then redone first.
+
 ## 2026-11-14 — Implemented Phase 8: Profile, sharing, and public shared shelf
 
 ### Prompts

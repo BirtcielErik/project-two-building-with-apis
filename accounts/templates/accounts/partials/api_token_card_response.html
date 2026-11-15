@@ -1,0 +1,6 @@
+{% comment %}
+  HTMX response to "Regenerate token": the updated API access card, plus the
+  toast container swapped "out of band" so the confirmation toast appears.
+{% endcomment %}
+{% include "accounts/partials/api_token_card.html" %}
+{% include "partials/toasts.html" with oob=True %}

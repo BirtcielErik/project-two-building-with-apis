@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     "django.contrib.humanize",  # number formatting such as 1,234 (intcomma)
     "django_tailwind_cli",
     "django_filters",  # shelf search, filters, and sorting (website and API)
+    "rest_framework",  # the JSON API under /api/
+    "rest_framework.authtoken",  # one API token per user (Profile → API access)
     "accounts",
     "shelf",
 ]
@@ -138,6 +140,25 @@ TAILWIND_CLI_VERSION = "2.10.35"
 TAILWIND_CLI_SRC_CSS = "tailwind/source.css"
 # Where the compiled CSS is written (inside STATICFILES_DIRS[0]).
 TAILWIND_CLI_DIST_CSS = "css/tailwind.css"
+
+
+# --- REST API (Django REST Framework) -----------------------------------------
+
+REST_FRAMEWORK = {
+    # Scripts send "Authorization: Token <key>"; the browser uses its login session.
+    # Token comes first so a missing or wrong token gets "401 Unauthorized" (with a
+    # WWW-Authenticate header) rather than "403 Forbidden".
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    # Every endpoint needs a logged-in user unless it says otherwise.
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
+    # 12 per page, the same as My Shelf (shelf.filters.PAGE_SIZE).
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 12,
+}
 
 
 # --- Email -------------------------------------------------------------------

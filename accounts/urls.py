@@ -27,4 +27,9 @@ urlpatterns = [
     path("profile/share/create/", views.share_create, name="share_create"),
     path("profile/share/regenerate/", views.share_regenerate, name="share_regenerate"),
     path("profile/share/disable/", views.share_disable, name="share_disable"),
+    path(
+        "profile/api-token/regenerate/",
+        views.api_token_regenerate,
+        name="api_token_regenerate",
+    ),
 ]

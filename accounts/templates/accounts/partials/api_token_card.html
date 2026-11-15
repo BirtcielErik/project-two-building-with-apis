@@ -1,0 +1,45 @@
+{% comment %}
+  The Profile page's "API access" card. Include with:
+  - api_token: the user's full API token.
+  - api_token_masked: the token with all but its last few characters hidden.
+
+  The box shows the masked token. Reveal swaps in the full token, and Copy
+  always copies the full token (from data-secret; see assets/js/app.js).
+  Regenerate asks first (data-htmx-confirm) and the server sends back this
+  whole card with the new token, plus a toast.
+{% endcomment %}
+<section id="api-token-card" class="card bg-base-200" aria-labelledby="api-token-heading">
+  <div class="card-body gap-4">
+    <h2 id="api-token-heading" class="card-title">API access</h2>
+    <p class="text-sm text-base-content/80">
+      Scripts and tools like curl or Postman can read your shelf through the API at
+      <code class="font-mono">/api/entries/</code>. Send your token in a header:
+      <code class="font-mono whitespace-nowrap">Authorization: Token &lt;your token&gt;</code>.
+      Keep it secret: anyone with it can use the API as you.
+    </p>
+
+    <div class="flex flex-col sm:flex-row gap-2">
+      <label for="api-token" class="sr-only">Your API token</label>
+      <input id="api-token" type="text" readonly
+             value="{{ api_token_masked }}"
+             data-secret="{{ api_token }}" data-masked="{{ api_token_masked }}"
+             class="input w-full font-mono text-sm" spellcheck="false" autocomplete="off">
+      <div class="flex gap-2 shrink-0">
+        <button type="button" class="btn btn-outline" data-reveal-target="api-token"
+                aria-controls="api-token">Reveal</button>
+        <button type="button" class="btn btn-primary" data-copy-target="api-token">Copy</button>
+      </div>
+    </div>
+
+    <form method="post" action="{% url 'accounts:api_token_regenerate' %}"
+          hx-post="{% url 'accounts:api_token_regenerate' %}" hx-target="#api-token-card" hx-swap="outerHTML"
+          hx-indicator="#api-token-spinner" hx-disabled-elt="find button"
+          data-htmx-confirm="api-token-regenerate-dialog">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline btn-error">
+        <span id="api-token-spinner" class="loading loading-spinner loading-xs htmx-indicator" aria-hidden="true"></span>
+        Regenerate token
+      </button>
+    </form>
+  </div>
+</section>

@@ -122,23 +122,42 @@ document.addEventListener("htmx:confirm", (event) => {
 
 // --- Profile page ----------------------------------------------------------------
 // A [data-copy-target="<input id>"] button copies that input's text to the
-// clipboard and briefly says "Copied ✓". If the clipboard isn't available
-// (some browsers block it on plain http), the text is selected instead so
-// the user can press Ctrl+C.
+// clipboard and briefly says "Copied ✓". An input with a [data-secret] (the
+// masked API token) copies its full secret, not the dots. If the clipboard
+// isn't available (some browsers block it on plain http), the full text is
+// shown and selected instead so the user can press Ctrl+C.
 document.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-copy-target]");
   if (!button) return;
   const input = document.getElementById(button.getAttribute("data-copy-target"));
   if (!input) return;
   const label = button.textContent;
+  const text = input.dataset.secret ?? input.value;
   try {
-    await navigator.clipboard.writeText(input.value);
+    await navigator.clipboard.writeText(text);
     button.textContent = "Copied ✓";
   } catch {
+    input.value = text;
     input.select();
     button.textContent = "Press Ctrl+C";
   }
   setTimeout(() => (button.textContent = label), 2000);
+});
+
+// A [data-reveal-target="<input id>"] button shows or hides a masked secret:
+// it switches the input between its [data-secret] and [data-masked] values.
+// The state is kept in [data-revealed], not aria-pressed: DaisyUI draws a
+// button with aria-pressed="true" as "active", which hides btn-outline's border.
+// The label itself ("Reveal" / "Hide") tells screen readers what it does.
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-reveal-target]");
+  if (!button) return;
+  const input = document.getElementById(button.getAttribute("data-reveal-target"));
+  if (!input) return;
+  const revealing = !button.hasAttribute("data-revealed");
+  input.value = revealing ? input.dataset.secret : input.dataset.masked;
+  button.toggleAttribute("data-revealed", revealing);
+  button.textContent = revealing ? "Hide" : "Reveal";
 });
 
 // Covers that already failed before this script ran.

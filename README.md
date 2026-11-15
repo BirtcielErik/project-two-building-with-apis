@@ -30,6 +30,22 @@ and rebuilds the CSS whenever a template changes:
 uv run --env-file .env python manage.py tailwind runserver
 ```
 
+## API
+
+Your API token is on the Profile page (**API access**). Send it in a header:
+
+```sh
+curl -H "Authorization: Token <your token>" "http://127.0.0.1:8000/api/entries/?status=finished&ordering=-rating"
+```
+
+| Endpoint | What it does |
+| --- | --- |
+| `GET /api/entries/` | Your shelf, 12 per page. Takes the same `q`, `status`, `min_rating`, `rated`, `ordering`, and `page` parameters as My Shelf. |
+| `GET /api/entries/<id>/` | One entry, with its book nested (including `cover_url`). |
+
+While logged in, you can also open these URLs in the browser. Another user's
+entry returns 404, and a missing or wrong token returns 401.
+
 ## Test and lint
 
 Tests need no `.env` file and no internet connection. Any real network call

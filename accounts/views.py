@@ -6,10 +6,12 @@ Login and logout use Django's built-in views (see ``accounts/urls.py``).
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
+from rest_framework.authtoken.models import Token
 
 from accounts.forms import DisplayNameForm, SignupForm
 from accounts.models import User, new_share_token
@@ -39,13 +41,13 @@ def signup(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def profile(request: HttpRequest) -> HttpResponse:
-    """Show the Profile page: the display name card and the share link card."""
+    """Show the Profile page: display name, share link, and API access cards."""
     return _render_profile(request, DisplayNameForm(instance=request.user))
 
 
 def _render_profile(request: HttpRequest, name_form: DisplayNameForm) -> HttpResponse:
     """Render the full Profile page with ``name_form`` (which may show errors)."""
-    context = {"name_form": name_form, **_share_context(request)}
+    context = {"name_form": name_form, **_share_context(request), **_api_token_context(request)}
     return render(request, "accounts/profile.html", context)
 
 
@@ -143,3 +145,40 @@ def _set_share_token(request: HttpRequest, token: str | None) -> None:
     """
     request.user.share_token = token
     request.user.save(update_fields=["share_token"])
+
+
+# --- API token ------------------------------------------------------------------
+
+# How many characters at the end of the token stay visible while it's masked.
+TOKEN_VISIBLE_CHARS = 4
+
+
+def _api_token_context(request: HttpRequest) -> dict[str, object]:
+    """Return what the API access card needs: the user's token and its masked form.
+
+    A user gets their token the first time they open the Profile page.
+    """
+    token, _ = Token.objects.get_or_create(user=request.user)
+    hidden = len(token.key) - TOKEN_VISIBLE_CHARS
+    return {"api_token": token.key, "api_token_masked": "•" * hidden + token.key[hidden:]}
+
+
+@login_required
+@require_POST
+def api_token_regenerate(request: HttpRequest) -> HttpResponse:
+    """Give the user a new API token, so the old one stops working.
+
+    HTMX requests get the API access card back (plus a toast). Without
+    JavaScript, the browser goes back to the Profile page.
+    """
+    # Deleting the old token row means its key no longer matches anyone, so the
+    # API rejects it at once (401). A fresh, random key replaces it.
+    with transaction.atomic():
+        Token.objects.filter(user=request.user).delete()
+        Token.objects.create(user=request.user)
+    messages.success(request, "New API token created. The old token no longer works.")
+    if not is_htmx(request):
+        return redirect("accounts:profile")
+    return render(
+        request, "accounts/partials/api_token_card_response.html", _api_token_context(request)
+    )

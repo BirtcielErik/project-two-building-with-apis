@@ -28,6 +28,75 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-14 — Implemented Phase 7: Notes and demo seed data
+
+### Prompts
+1. `/implement @prd/one-more-chapter.md @plans/one-more-chapter.md Implement Phase 7`
+2. 2 and 3 only *(TDD behaviors offered: adding a note puts it at the top
+   and blank notes are rejected; notes on another user's entry are 404;
+   `seed` is repeatable and leaves other users alone)*
+3. make it pass *(RED test for behavior 2)*
+4. yes, move on to behavior 3
+5. make it pass *(RED test for behavior 3)*
+6. yes, continue with the rest of the phase
+7. all file edits should be done through the diff feature - not through
+   bash *(after rejecting a `cat >>` heredoc that appended `NoteForm`)*
+8. When attempting to enter a completely blank note - the browser's error
+   is displayed instead of our styled error
+9. Evaluate our current CLAUDE.md file and suggest any need additions to
+   keep it up to date with the current codebase
+10. Apply the suggested changes but be as succint as possible. Go ahead
+    with the cleanup
+11. The manual checks pass, finish the phase
+
+### Summary
+- **Outcome:** Built Phase 7 of the plan:
+  - `Note` model (cascade-deleted with its entry, newest first) and
+    `NoteForm` (whitespace-only text is rejected).
+  - Notes section on the detail page (`partials/notes.html`): add box on
+    top, notes with timestamps, delete buttons, and a 📝 empty state.
+    HTMX swaps the whole section and shows "Note added." / "Note
+    deleted." toasts. Without JavaScript the forms post and redirect.
+  - Deleting a note asks first in a themed dialog. HTMX forms need
+    HTMX's `htmx:confirm` event (new `data-htmx-confirm` in `app.js`),
+    because the Phase 6 `submit` listener can't stop an HTMX request.
+  - The Remove dialog states the exact notes count, kept current by an
+    out-of-band swap after each add or delete. My Shelf rows show real
+    notes counts from a `Count` annotation.
+  - `python manage.py seed`: two demo users (`demo_maya` with display
+    name and share link, `demo_theo` with sharing off), 18 and 16 books
+    across all statuses, with ratings, finished dates, and notes. Book
+    data is built in (30 real Open Library works, looked up once), so it
+    runs offline. Re-running resets only the demo shelves, keeps Maya's
+    share token, and never overwrites shared `Book` rows. Added
+    `new_share_token()` to `accounts/models.py` for Phase 8.
+  - TDD for behaviors 2 and 3, then normal tests for the rest (240 tests).
+  - CLAUDE.md updated with the new commands, building blocks, and
+    conventions. Test cleanup: `reader` fixture moved to `conftest.py`
+    and `add_to_shelf()` to `shelf/tests/helpers.py`, replacing 5 and 4
+    copies.
+- **Deviations:** Chose TDD for only behaviors 2 and 3, not all three
+  offered. Asked for all file edits through the Edit/Write diff tools
+  instead of Bash. Asked for a CLAUDE.md review, then for the changes
+  to be applied as briefly as possible, plus the suggested test cleanup.
+- **Sideways:**
+  - Behavior 2's RED test failed only on its control assertion, because
+    the routes didn't exist yet and the 404 checks passed trivially. The
+    control (the owner's own add/delete must return 200) is what keeps
+    the test honest.
+  - The first Open Library lookup for seed data printed nothing on
+    Windows (a cp1252 encoding error on "Brontë"). The fix was ASCII
+    JSON output. Four lookups matched the wrong work (an adaptation of
+    *1984*, a Sanderson box set, odd editions of *Monte Cristo* and
+    *Anna Karenina*) and were dropped.
+  - The notes `Count` annotation made Django ignore `Meta.ordering`. An
+    `UnorderedObjectListWarning` exposed it when an invalid `ordering`
+    URL value was given. Fixed with an explicit default `order_by`.
+  - A completely blank note showed the browser's "fill out this field"
+    popup instead of our styled error, because Django adds `required` to
+    the textarea. The whitespace-only test passed because whitespace gets
+    past the browser. Fixed with `novalidate` plus a regression test.
+
 ## 2026-11-14 — Implemented Phase 6: Book detail and editing
 
 ### Prompts

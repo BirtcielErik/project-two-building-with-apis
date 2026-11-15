@@ -1,0 +1,9 @@
+{% comment %}
+  HTMX response to adding or deleting a note: the new notes section, plus two
+  "out of band" swaps elsewhere on the page: the Remove dialog's warning (so
+  its notes count stays right) and the toast container (for "Note added." or
+  "Note deleted.").
+{% endcomment %}
+{% include "shelf/partials/notes.html" %}
+{% include "shelf/partials/remove_warning.html" with oob=True %}
+{% include "partials/toasts.html" with oob=True %}

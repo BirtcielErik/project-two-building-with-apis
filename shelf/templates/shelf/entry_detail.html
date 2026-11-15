@@ -42,6 +42,8 @@
           {% include "shelf/partials/reading_form.html" %}
         </div>
       </section>
+
+      {% include "shelf/partials/notes.html" %}
     </div>
   </div>
 </div>
@@ -49,14 +51,23 @@
 <dialog id="remove-dialog" class="modal" aria-labelledby="remove-dialog-title">
   <div class="modal-box">
     <h3 id="remove-dialog-title" class="font-bold text-lg">Remove from your shelf?</h3>
-    <p class="py-3 text-sm">
-      “{{ book.title }}” will be removed from your shelf, along with its rating and finished date.
-      {# Phase 7 (notes) makes this say exactly how many notes will go. #}
-      Any notes you wrote about it will be deleted too. This can't be undone.
-    </p>
+    {% include "shelf/partials/remove_warning.html" %}
     <div class="modal-action">
       <form method="dialog"><button class="btn btn-ghost">Cancel</button></form>
       <button type="submit" form="remove-form" class="btn btn-error" data-confirmed>Remove</button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+{# Asks before deleting a note. Its Delete button sends the waiting HTMX request (see assets/js/app.js). #}
+<dialog id="note-delete-dialog" class="modal" aria-labelledby="note-delete-dialog-title">
+  <div class="modal-box">
+    <h3 id="note-delete-dialog-title" class="font-bold text-lg">Delete this note?</h3>
+    <p class="py-3 text-sm">The note will be permanently deleted. This can't be undone.</p>
+    <div class="modal-action">
+      <form method="dialog"><button class="btn btn-ghost">Cancel</button></form>
+      <button type="button" class="btn btn-error" data-dialog-confirm>Delete</button>
     </div>
   </div>
   <form method="dialog" class="modal-backdrop"><button>close</button></form>

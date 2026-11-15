@@ -4,23 +4,10 @@ import re
 
 import pytest
 
-from shelf.models import Book, ShelfEntry
+from shelf.models import ShelfEntry
+from shelf.tests.helpers import add_to_shelf
 
 Status = ShelfEntry.Status
-
-
-@pytest.fixture
-def reader(logged_in_client, django_user_model):
-    """The user that ``logged_in_client`` is logged in as."""
-    return django_user_model.objects.get(username="reader")
-
-
-def add_to_shelf(user, key: str, title: str, authors: str = "Some Author", **fields) -> ShelfEntry:
-    """Put a book with work key ``key`` on ``user``'s shelf."""
-    book, _ = Book.objects.get_or_create(
-        ol_work_key=key, defaults={"title": title, "authors": authors}
-    )
-    return ShelfEntry.objects.create(user=user, book=book, **fields)
 
 
 def listed_titles(html: str) -> list[str]:

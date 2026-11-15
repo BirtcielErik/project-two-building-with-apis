@@ -5,21 +5,8 @@ import datetime
 import pytest
 
 from shelf.filters import ShelfEntryFilter
-from shelf.models import Book, ShelfEntry
-
-
-@pytest.fixture
-def reader(django_user_model):
-    """A user whose shelf the tests fill."""
-    return django_user_model.objects.create_user(username="reader", password="pw-12345-long")
-
-
-def add_to_shelf(user, key: str, title: str, authors: str = "Some Author", **fields) -> ShelfEntry:
-    """Put a book with work key ``key`` on ``user``'s shelf."""
-    book, _ = Book.objects.get_or_create(
-        ol_work_key=key, defaults={"title": title, "authors": authors}
-    )
-    return ShelfEntry.objects.create(user=user, book=book, **fields)
+from shelf.models import ShelfEntry
+from shelf.tests.helpers import add_to_shelf
 
 
 def filtered_titles(user, **params: str) -> list[str]:

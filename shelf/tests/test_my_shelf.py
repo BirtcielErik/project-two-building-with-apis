@@ -2,10 +2,9 @@
 
 import datetime
 
-import pytest
-
 from shelf import openlibrary
-from shelf.models import Book, ShelfEntry
+from shelf.models import ShelfEntry
+from shelf.tests.helpers import add_to_shelf
 
 
 def test_logged_in_user_visiting_home_goes_to_my_shelf(logged_in_client):
@@ -54,21 +53,6 @@ def test_navbar_shows_signup_and_login_when_logged_out(client):
 # --- Listing saved books -------------------------------------------------------
 
 
-def add_to_shelf(user, key: str, title: str, **entry_fields) -> ShelfEntry:
-    """Put a book with work key ``key`` on ``user``'s shelf."""
-    book, _ = Book.objects.get_or_create(
-        ol_work_key=key,
-        defaults={"title": title, "authors": "Some Author", "first_publish_year": 2001},
-    )
-    return ShelfEntry.objects.create(user=user, book=book, **entry_fields)
-
-
-@pytest.fixture
-def reader(logged_in_client, django_user_model):
-    """The user that ``logged_in_client`` is logged in as."""
-    return django_user_model.objects.get(username="reader")
-
-
 def test_saved_books_are_listed_as_rows_with_their_details(logged_in_client, reader):
     add_to_shelf(
         reader,
@@ -84,8 +68,8 @@ def test_saved_books_are_listed_as_rows_with_their_details(logged_in_client, rea
     assert "data-empty-shelf" not in html
     assert html.count("data-book-row") == 1
     assert "The Hobbit" in html
-    assert "Some Author" in html
-    assert "2001" in html
+    assert "J.R.R. Tolkien" in html
+    assert "1937" in html
     assert 'data-status="finished"' in html
     assert ">Finished<" in html
     assert 'data-rating="4"' in html

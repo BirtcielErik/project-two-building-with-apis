@@ -3,7 +3,8 @@
   Used by Search results and My Shelf. Include inside a <ul> with:
   - book: anything with title, authors_display, first_publish_year, cover_id.
   - entry (optional): a ShelfEntry, which adds status, stars, dates, and notes count,
-    and makes the title a link to the book's detail page.
+    and makes the title a link to the book's detail page. It needs a notes_count
+    annotation (see the my_shelf view).
   - actions_template (optional): a template drawn at the end of the row (e.g. the Save button).
 {% endcomment %}
 <li class="flex gap-4 p-3" data-book-row{% if entry %} id="entry-{{ entry.pk }}"{% endif %}>
@@ -33,8 +34,8 @@
       <div class="flex flex-wrap gap-x-4 text-xs text-base-content/60">
         {% if entry.finished_on %}<span>Finished {{ entry.finished_on|date:"M j, Y" }}</span>{% endif %}
         <span>Added {{ entry.added_at|date:"M j, Y" }}</span>
-        {# Notes arrive in Phase 7; until then every book has none. #}
-        <span data-notes-count>📝 0 notes</span>
+        {# notes_count is added by the My Shelf query (a COUNT), so rows don't each query their notes. #}
+        <span data-notes-count>📝 {{ entry.notes_count }} note{{ entry.notes_count|pluralize }}</span>
       </div>
     {% endif %}
   </div>

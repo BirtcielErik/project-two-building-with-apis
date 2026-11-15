@@ -2,7 +2,15 @@
 
 from django.contrib import admin
 
-from shelf.models import Book, ShelfEntry
+from shelf.models import Book, Note, ShelfEntry
+
+
+class NoteInline(admin.TabularInline):
+    """Show an entry's notes on its admin page."""
+
+    model = Note
+    extra = 0
+    readonly_fields = ["created_at"]
 
 
 @admin.register(Book)
@@ -21,3 +29,4 @@ class ShelfEntryAdmin(admin.ModelAdmin):
     list_filter = ["status"]
     search_fields = ["book__title", "user__username"]
     autocomplete_fields = ["book"]
+    inlines = [NoteInline]

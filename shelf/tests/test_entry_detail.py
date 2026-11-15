@@ -8,24 +8,10 @@ from django.utils import timezone
 
 from shelf import openlibrary
 from shelf.models import Book, ShelfEntry
+from shelf.tests.helpers import add_to_shelf
 
 # HTMX adds this header to every request it sends.
 HTMX = {"HTTP_HX_REQUEST": "true"}
-
-
-@pytest.fixture
-def reader(logged_in_client, django_user_model):
-    """The user that ``logged_in_client`` is logged in as."""
-    return django_user_model.objects.get(username="reader")
-
-
-def add_to_shelf(user, key: str = "OL27482W", title: str = "The Hobbit", **fields) -> ShelfEntry:
-    """Put a book on ``user``'s shelf and return the entry."""
-    book, _ = Book.objects.get_or_create(
-        ol_work_key=key,
-        defaults={"title": title, "authors": "J.R.R. Tolkien", "first_publish_year": 1937},
-    )
-    return ShelfEntry.objects.create(user=user, book=book, **fields)
 
 
 def checked(html: str, name: str, value: str) -> bool:
@@ -268,7 +254,7 @@ def test_detail_page_has_a_confirmed_remove_button(logged_in_client, reader):
     assert f'action="/shelf/{entry.pk}/remove/"' in html
     assert 'data-confirm-dialog="remove-dialog"' in html
     assert '<dialog id="remove-dialog"' in html
-    assert "notes you wrote about it will be deleted too" in html
+    assert "It has no notes." in html  # the exact count is tested in test_notes.py
 
 
 def test_removing_a_book_deletes_the_entry_and_returns_to_my_shelf(logged_in_client, reader):

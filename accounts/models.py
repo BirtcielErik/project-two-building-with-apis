@@ -1,7 +1,18 @@
 """Database models for user accounts."""
 
+import secrets
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+
+
+def new_share_token() -> str:
+    """Return a new unguessable, URL-safe token for a shared-shelf link.
+
+    ``secrets`` uses the operating system's cryptographically secure random
+    numbers, so nobody can predict or guess another user's token.
+    """
+    return secrets.token_urlsafe(32)
 
 
 class User(AbstractUser):

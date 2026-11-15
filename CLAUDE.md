@@ -14,6 +14,8 @@ A Django web app and REST API for keeping a personal bookshelf of Open Library b
 - Dev server + CSS rebuild: `uv run --env-file .env python manage.py tailwind runserver`
 - Build CSS: `uv run --env-file .env python manage.py tailwind build` (`assets/css/tailwind.css` is generated and git-ignored)
 - Test: `uv run pytest` (no `.env` needed) · Lint: `uv run ruff check .` · Format: `uv run ruff format --check .`
+- Migrate: `uv run --env-file .env python manage.py migrate`
+- Demo data: `uv run --env-file .env python manage.py seed` (offline, re-runnable): `demo_maya` (sharing on) and `demo_theo`, password `one-more-chapter`
 
 ## Code style
 
@@ -34,15 +36,25 @@ A Django web app and REST API for keeping a personal bookshelf of Open Library b
 ## Shared building blocks (reuse, don't rebuild)
 
 - `shelf/openlibrary.py`: Open Library service and its exceptions
-- `shelf/htmx.py`: `render_page_or_partial()`
+- `shelf/saving.py`: `save_to_shelf()`, the one save flow for website and API (`SaveError`, `AlreadyOnShelf`)
+- `shelf/filters.py`: `ShelfEntryFilter`, `TIEBREAK_ORDERING`, `status_counts()`
+- `shelf/forms.py`: `ShelfEntryForm`, `NoteForm`; validation rules live on the models so serializers reuse them
+- `shelf/views.py`: `_get_own_entry()` for owner-scoped 404s
+- `accounts/models.py`: `new_share_token()`
+- `shelf/htmx.py`: `is_htmx()`, `render_page_or_partial()`
 - `shelf/pagination.py` + `templates/partials/pagination.html`: shortened page links
-- `shelf/templates/shelf/partials/book_row.html`, `cover.html`: list row and cover with placeholder
+- `shelf/templates/shelf/partials/`: `book_row.html` (needs a `notes_count` annotation), `cover.html`, `stars.html`, `status_badge.html`
+- `templates/partials/`: `field_errors.html`, `toasts.html` (`oob=True` in HTMX responses)
 - `shelf/templatetags/shelf_extras.py`: `cover_url` filter
 
 ## Conventions
 
-- Tests: `conftest.py` blocks the network, clears the cache, and provides `logged_in_client`. Test `openlibrary` with `responses`; test views by monkeypatching `openlibrary.<function>`.
+- Tests: `conftest.py` blocks the network, clears the cache, and provides `reader` and `logged_in_client` (logged in as `reader`); `shelf/tests/helpers.py` has `add_to_shelf()`. Test `openlibrary` with `responses`; test views by monkeypatching `openlibrary.<function>`.
 - HTMX error states return 200 (HTMX doesn't swap 4xx/5xx). Loading: `hx-indicator` on a `.htmx-indicator` spinner plus `hx-disabled-elt`.
+- HTMX success: a `*_response.html` wrapper = partial + `toasts.html` with `oob=True`. No-JS fallback: redirect with `messages.success`, or re-render the full page with errors.
+- Confirmations (`assets/js/app.js`): plain forms use `data-confirm-dialog="<dialog id>"`; HTMX forms use `data-htmx-confirm="<dialog id>"`.
+- Forms validated on the server get `novalidate`, so styled errors show instead of browser popups.
+- `annotate(Count(...))` drops `Meta.ordering`: add `.order_by(*TIEBREAK_ORDERING)`, and keep such annotations off querysets used for other aggregates.
 
 ## References
 

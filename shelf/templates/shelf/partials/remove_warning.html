@@ -1,0 +1,17 @@
+{% comment %}
+  The Remove from shelf dialog's warning, saying exactly how many notes will
+  be deleted. Include with entry and notes. Notes responses re-send it with
+  oob=True, so the count stays right after adding or deleting a note.
+{% endcomment %}
+<p id="remove-warning" class="py-3 text-sm"{% if oob %} hx-swap-oob="true"{% endif %} data-remove-warning>
+  {% with count=notes|length %}
+    {% if count %}
+      “{{ entry.book.title }}” will be removed from your shelf, along with its rating, finished date,
+      and <strong>{{ count }} note{{ count|pluralize }}</strong>.
+    {% else %}
+      “{{ entry.book.title }}” will be removed from your shelf, along with its rating and finished date.
+      It has no notes.
+    {% endif %}
+  {% endwith %}
+  This can't be undone.
+</p>

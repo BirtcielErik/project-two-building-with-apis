@@ -1,4 +1,4 @@
-"""Database models for books and shelf entries. Notes arrive in a later phase."""
+"""Database models for books, shelf entries, and notes."""
 
 import datetime
 
@@ -90,3 +90,23 @@ class ShelfEntry(models.Model):
     def __str__(self) -> str:
         """Return "<username>: <title>" for the admin."""
         return f"{self.user}: {self.book}"
+
+
+class Note(models.Model):
+    """A private, timestamped thought the user wrote about a book on their shelf.
+
+    Notes can only be added and deleted (never edited), they disappear with
+    their shelf entry, and they're never shown to anyone but the owner.
+    """
+
+    entry = models.ForeignKey(ShelfEntry, on_delete=models.CASCADE, related_name="notes")
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        # Newest first; the ID breaks ties between notes saved in the same instant.
+        ordering = ["-created_at", "-pk"]
+
+    def __str__(self) -> str:
+        """Return the start of the note's text for the admin."""
+        return self.text[:50]

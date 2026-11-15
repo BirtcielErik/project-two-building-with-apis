@@ -3,7 +3,7 @@
 from django import forms
 from django.utils import timezone
 
-from shelf.models import ShelfEntry
+from shelf.models import Note, ShelfEntry
 
 # The rating choices: "" means "no rating", then 1 to 5 stars.
 RATING_CHOICES = [
@@ -74,3 +74,32 @@ class ShelfEntryForm(forms.ModelForm):
         """Return the chosen rating as text (``"1"``–``"5"``), or ``""`` for no rating."""
         value = self["rating"].value()
         return "" if value is None else str(value)
+
+
+class NoteForm(forms.ModelForm):
+    """Add a note to a book on the user's shelf.
+
+    Django strips spaces and blank lines from the start and end of the text,
+    so a note of only whitespace counts as empty and is rejected.
+    """
+
+    class Meta:
+        model = Note
+        fields = ["text"]
+        labels = {"text": "New note"}
+        error_messages = {"text": {"required": "Write something before adding a note."}}
+        widgets = {
+            "text": forms.Textarea(
+                attrs={
+                    "rows": 3,
+                    "placeholder": "A thought, a quote, a question…",
+                    "class": "textarea w-full",
+                }
+            )
+        }
+
+    def full_clean(self) -> None:
+        """Validate the form, then give the text box a red border if it has an error."""
+        super().full_clean()
+        if "text" in self.errors:
+            self.fields["text"].widget.attrs["class"] += " textarea-error"

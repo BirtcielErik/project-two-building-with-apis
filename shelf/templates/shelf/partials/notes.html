@@ -1,0 +1,61 @@
+{% comment %}
+  The notes section on the book detail page: the add-note box, then the notes
+  (newest first) with a Delete button each. Include with:
+  - entry: the ShelfEntry the notes belong to.
+  - notes: its notes, newest first (a list, so it's only queried once).
+  - note_form: a NoteForm (bound after a failed add, so the error shows).
+
+  With HTMX, adding or deleting posts in the background and the server sends
+  back this whole section to replace it. Without JavaScript the forms post
+  normally and the page reloads.
+{% endcomment %}
+<section id="notes" class="space-y-3" aria-labelledby="notes-heading">
+  <h2 id="notes-heading" class="text-xl font-semibold">
+    Notes <span class="text-base font-normal text-base-content/50">({{ notes|length }})</span>
+  </h2>
+
+  {# novalidate: skip the browser's own "fill out this field" popup, so our styled error shows instead. #}
+  <form method="post" action="{% url 'shelf:note_add' entry.pk %}"
+        hx-post="{% url 'shelf:note_add' entry.pk %}" hx-target="#notes" hx-swap="outerHTML"
+        hx-indicator="#note-spinner" hx-disabled-elt="find button[type='submit']"
+        class="flex flex-col gap-2" novalidate>
+    {% csrf_token %}
+    <label for="{{ note_form.text.id_for_label }}" class="sr-only">{{ note_form.text.label }}</label>
+    {{ note_form.text }}
+    {% include "partials/field_errors.html" with errors=note_form.text.errors %}
+    <div class="flex justify-end">
+      <button type="submit" class="btn btn-sm btn-primary btn-outline">
+        <span id="note-spinner" class="loading loading-spinner loading-xs htmx-indicator" aria-hidden="true"></span>
+        Add note
+      </button>
+    </div>
+  </form>
+
+  {% if notes %}
+    <ul class="space-y-3">
+      {% for note in notes %}
+        <li class="bg-base-200 rounded-box p-4" data-note>
+          {# No spaces around the text: whitespace-pre-line keeps the note's own line breaks. #}
+          <p class="whitespace-pre-line break-words">{{ note.text }}</p>
+          <div class="flex items-center justify-between gap-3 mt-2">
+            <time datetime="{{ note.created_at|date:'c' }}" class="text-xs text-base-content/50">
+              {{ note.created_at|date:"M j, Y · g:i A" }}
+            </time>
+            {# With JavaScript, the note-delete dialog asks first (see assets/js/app.js). #}
+            <form method="post" action="{% url 'shelf:note_delete' entry.pk note.pk %}"
+                  hx-post="{% url 'shelf:note_delete' entry.pk note.pk %}" hx-target="#notes" hx-swap="outerHTML"
+                  hx-disabled-elt="find button" data-htmx-confirm="note-delete-dialog">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-ghost btn-xs text-error">Delete</button>
+            </form>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="text-center py-8 bg-base-200 rounded-box text-base-content/60" data-notes-empty>
+      <p class="text-3xl" aria-hidden="true">📝</p>
+      <p class="text-sm mt-1">No notes yet. Jot down your first thought above. Only you can see your notes.</p>
+    </div>
+  {% endif %}
+</section>

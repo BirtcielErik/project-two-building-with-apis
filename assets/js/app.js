@@ -100,6 +100,26 @@ document.addEventListener("submit", (event) => {
   document.getElementById(dialogId).showModal();
 });
 
+// The same idea for HTMX forms, like each note's Delete button. HTMX sends its
+// request before a "submit" listener here could stop it, so instead we use
+// HTMX's own "htmx:confirm" event, which fires before every HTMX request.
+// For an element marked [data-htmx-confirm="<dialog id>"], pause the request,
+// open the dialog, and send the request only when its [data-dialog-confirm]
+// button is pressed. Cancel just closes the dialog and nothing is sent.
+document.addEventListener("htmx:confirm", (event) => {
+  const dialogId = event.detail.elt.getAttribute("data-htmx-confirm");
+  if (!dialogId) return;
+  event.preventDefault();
+  const dialog = document.getElementById(dialogId);
+  // Assigning onclick (rather than addEventListener) replaces any handler left
+  // over from an earlier, cancelled delete, so only this request is sent.
+  dialog.querySelector("[data-dialog-confirm]").onclick = () => {
+    dialog.close();
+    event.detail.issueRequest(true);
+  };
+  dialog.showModal();
+});
+
 // Covers that already failed before this script ran.
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("img[data-cover]").forEach((img) => {

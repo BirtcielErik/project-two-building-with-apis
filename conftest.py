@@ -42,10 +42,15 @@ def block_network(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def logged_in_client(client: Client, django_user_model: type[AbstractUser]) -> Client:
-    """A test client logged in as a fresh user named "reader"."""
-    user = django_user_model.objects.create_user(username="reader", password="pw-12345-long")
-    client.force_login(user)
+def reader(django_user_model: type[AbstractUser]) -> AbstractUser:
+    """A fresh user named "reader" (the one ``logged_in_client`` logs in as)."""
+    return django_user_model.objects.create_user(username="reader", password="pw-12345-long")
+
+
+@pytest.fixture
+def logged_in_client(client: Client, reader: AbstractUser) -> Client:
+    """A test client logged in as ``reader``."""
+    client.force_login(reader)
     return client
 
 

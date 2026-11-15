@@ -5,6 +5,7 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db.models import Count
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -17,10 +18,11 @@ from shelf.filters import (
     ORDERING_CHOICES,
     PAGE_SIZE,
     RATED_CHOICES,
+    TIEBREAK_ORDERING,
     ShelfEntryFilter,
     status_counts,
 )
-from shelf.forms import ShelfEntryForm
+from shelf.forms import NoteForm, ShelfEntryForm
 from shelf.htmx import is_htmx, render_page_or_partial
 from shelf.models import ShelfEntry
 from shelf.pagination import page_links
@@ -51,7 +53,12 @@ def my_shelf(request: HttpRequest) -> HttpResponse:
     Open Library is down. An empty shelf shows a button to the Search page.
     """
     shelf = request.user.shelf_entries.select_related("book")
-    filterset = ShelfEntryFilter(request.GET, queryset=shelf)
+    # Each row shows its notes count. Only the list gets this count: joining
+    # notes into the status counts below would count each book once per note.
+    # Counting groups the query, and Django then ignores the model's default
+    # ordering, so the default sort is set here. A chosen sort replaces it.
+    listed = shelf.annotate(notes_count=Count("notes")).order_by(*TIEBREAK_ORDERING)
+    filterset = ShelfEntryFilter(request.GET, queryset=listed)
     # Invalid values (like min_rating=9) are dropped from cleaned_data, so they're ignored.
     filterset.is_valid()
     chosen = filterset.form.cleaned_data
@@ -123,10 +130,19 @@ def _get_own_entry(request: HttpRequest, pk: int) -> ShelfEntry:
     return get_object_or_404(ShelfEntry.objects.select_related("book"), pk=pk, user=request.user)
 
 
-def _render_detail(request: HttpRequest, entry: ShelfEntry, form: ShelfEntryForm) -> HttpResponse:
-    """Render the full book detail page for ``entry`` with the given reading form."""
+def _render_detail(
+    request: HttpRequest,
+    entry: ShelfEntry,
+    form: ShelfEntryForm,
+    note_form: NoteForm | None = None,
+) -> HttpResponse:
+    """Render the full book detail page for ``entry``.
+
+    ``form`` is the reading form, and ``note_form`` the add-note form (a blank
+    one if not given), so either can be shown with its errors.
+    """
     context = {
-        "entry": entry,
+        **_notes_context(entry, note_form or NoteForm()),
         "form": form,
         "open_library_url": openlibrary.work_url(entry.book.ol_work_key),
     }
@@ -171,6 +187,57 @@ def entry_remove(request: HttpRequest, pk: int) -> HttpResponse:
     entry.delete()
     messages.success(request, f"Removed “{title}” from your shelf.")
     return redirect("shelf:my_shelf")
+
+
+@login_required
+@require_POST
+def note_add(request: HttpRequest, pk: int) -> HttpResponse:
+    """Add a note to one of the user's shelf entries.
+
+    HTMX requests get the notes section back: the new note at the top and a
+    toast, or the add box with an error under it (nothing is saved). Without
+    JavaScript, a saved note goes back to the detail page, and an empty one
+    shows the full page with the error.
+    """
+    entry = _get_own_entry(request, pk)
+    form = NoteForm(request.POST)
+    saved = form.is_valid()
+    if saved:
+        form.instance.entry = entry
+        form.save()
+        messages.success(request, "Note added.")
+
+    if not is_htmx(request):
+        if not saved:
+            return _render_detail(request, entry, ShelfEntryForm(instance=entry), note_form=form)
+        return redirect(f"{reverse('shelf:entry_detail', args=[entry.pk])}#notes")
+
+    # After a save the add box starts empty again; after an error it keeps the text.
+    note_form = NoteForm() if saved else form
+    return render(request, "shelf/partials/notes_response.html", _notes_context(entry, note_form))
+
+
+@login_required
+@require_POST
+def note_delete(request: HttpRequest, pk: int, note_pk: int) -> HttpResponse:
+    """Delete one note from one of the user's shelf entries, then show a toast.
+
+    The note must belong to that entry, and the entry to the user; otherwise
+    it's a 404. HTMX requests get the updated notes section back; without
+    JavaScript the browser goes back to the detail page.
+    """
+    entry = _get_own_entry(request, pk)
+    get_object_or_404(entry.notes, pk=note_pk).delete()
+    messages.success(request, "Note deleted.")
+
+    if not is_htmx(request):
+        return redirect(f"{reverse('shelf:entry_detail', args=[entry.pk])}#notes")
+    return render(request, "shelf/partials/notes_response.html", _notes_context(entry, NoteForm()))
+
+
+def _notes_context(entry: ShelfEntry, note_form: NoteForm) -> dict[str, object]:
+    """Return what the notes section needs: the entry, its notes (newest first), the add form."""
+    return {"entry": entry, "notes": list(entry.notes.all()), "note_form": note_form}
 
 
 @login_required

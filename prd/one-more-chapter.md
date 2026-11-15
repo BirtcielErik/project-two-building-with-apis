@@ -62,7 +62,7 @@ The UI uses Tailwind with DaisyUI (Forest theme) and HTMX for in-place updates.
 ### Browsing My Shelf
 27. As a user, I want to see my saved books as list rows showing cover, title, authors, year, status badge, star rating, finished date, date added, and number of notes, so that I can take in my shelf at a glance.
 28. As a user, I want a "Currently Reading" strip at the top of my shelf, so that the books I'm in the middle of are always easy to reach.
-29. As a user, I want the Currently Reading strip to hide while I'm filtering or searching, so that it doesn't get in the way of my results.
+29. As a user, I want the Currently Reading strip to stay in place while I filter or search, so that the page doesn't jump as my results change.
 30. As a user, I want to search my shelf by title or author as I type, so that I can find a book quickly.
 31. As a user, I want to filter my shelf by status from a sidebar that shows how many books are in each status, so that I can focus on one part of my reading life.
 32. As a user, I want to filter my shelf by minimum star rating, so that I can find my favorites.
@@ -220,7 +220,7 @@ The UI uses Tailwind with DaisyUI (Forest theme) and HTMX for in-place updates.
   - A "Book data from Open Library" credit link appears in the Search page footer.
 - **My Shelf**: a left sidebar with status filters (with counts), minimum rating, rated or not rated, and Clear all filters.
   - The main column has a debounced live search box and a sort dropdown, above the list rows (cover, title, authors, year, status badge, stars, finished date, added date, notes count) and pagination.
-  - A Currently Reading strip sits above the search and sort bar and is hidden while any filter or search is active.
+  - A Currently Reading strip sits above the search and sort bar. It always shows every Currently Reading book; filters and search change only the list below it, so the page doesn't jump.
   - On phones the sidebar sits behind a Filters button.
   - Every change swaps the results via HTMX and pushes a bookmarkable URL.
   - Empty states: an empty shelf links to Search; no matches offers Clear filters.

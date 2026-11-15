@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.humanize",  # number formatting such as 1,234 (intcomma)
     "django_tailwind_cli",
+    "django_filters",  # shelf search, filters, and sorting (website and API)
     "accounts",
     "shelf",
 ]

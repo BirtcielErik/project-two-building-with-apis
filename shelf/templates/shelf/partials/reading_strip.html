@@ -1,0 +1,21 @@
+{% comment %}
+  The "Currently Reading" strip at the top of My Shelf. Include with:
+  - reading_now: all of the user's Currently Reading entries. Filters and
+    search don't affect it. With none, the strip isn't shown.
+{% endcomment %}
+{% if reading_now %}
+  <section class="bg-base-200 rounded-box p-4" aria-labelledby="reading-strip-heading" data-reading-strip>
+    <h2 id="reading-strip-heading" class="text-sm font-semibold uppercase tracking-wide text-primary mb-3">Currently Reading</h2>
+    <ul class="flex gap-4 overflow-x-auto pb-1">
+      {% for entry in reading_now %}
+        <li class="flex gap-3 items-center min-w-60 max-w-72 p-1">
+          {% include "shelf/partials/cover.html" with cover_id=entry.book.cover_id title=entry.book.title size="S" classes="w-12 h-18 rounded shrink-0" %}
+          <div class="min-w-0">
+            <p class="font-semibold truncate">{{ entry.book.title }}</p>
+            <p class="text-xs text-base-content/60 truncate">{{ entry.book.authors_display|default:"Unknown author" }}</p>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endif %}

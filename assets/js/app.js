@@ -44,6 +44,41 @@ document.addEventListener(
   true,
 );
 
+// --- Clean URLs for filter forms ---------------------------------------------
+// A form marked [data-drop-empty-params] leaves blank fields out of its HTMX
+// request, so the pushed URL is "/shelf/?status=finished" rather than
+// "/shelf/?q=&status=finished&min_rating=&rated=&ordering=".
+document.addEventListener("htmx:configRequest", (event) => {
+  if (!event.detail.elt.matches("[data-drop-empty-params]")) return;
+  const data = event.detail.formData || event.detail.parameters;
+  for (const key of new Set(data.keys())) {
+    if (data.getAll(key).every((value) => value === "")) data.delete(key);
+  }
+});
+
+// --- My Shelf ----------------------------------------------------------------
+// "Clear filters" links: empty the search box, pick the "any" choice of every
+// filter (the radio whose value is ""), and re-run the form through HTMX.
+// The chosen sort order is kept. Without JavaScript the link just opens /shelf/.
+document.addEventListener("click", (event) => {
+  const link = event.target.closest("[data-clear-filters]");
+  const form = document.getElementById("shelf-filters");
+  if (!link || !form) return;
+  event.preventDefault();
+  form.querySelectorAll('input[type="search"]').forEach((input) => (input.value = ""));
+  form.querySelectorAll('input[type="radio"][value=""]').forEach((radio) => (radio.checked = true));
+  form.requestSubmit();
+});
+
+// The phone "Filters" button shows or hides the filter sidebar.
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-toggle-filters]");
+  if (!button) return;
+  const sidebar = document.getElementById(button.getAttribute("aria-controls"));
+  const hidden = sidebar.classList.toggle("hidden");
+  button.setAttribute("aria-expanded", String(!hidden));
+});
+
 // Covers that already failed before this script ran.
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("img[data-cover]").forEach((img) => {

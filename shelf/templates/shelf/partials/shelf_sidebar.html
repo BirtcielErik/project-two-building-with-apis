@@ -1,0 +1,50 @@
+{% comment %}
+  My Shelf's filter sidebar: status (with counts for the whole shelf), minimum
+  rating, and rated / not rated. These are radio buttons inside the
+  #shelf-filters form, so the browser keeps track of which one is chosen.
+  Below the "lg" breakpoint it is hidden until the Filters button opens it.
+{% endcomment %}
+<aside id="shelf-sidebar" class="hidden lg:block space-y-6 bg-base-200 lg:bg-transparent rounded-box p-4 lg:p-0">
+  <fieldset>
+    <legend class="text-xs font-semibold uppercase tracking-wide text-base-content/60 mb-2">Status</legend>
+    <ul class="menu menu-sm p-0 w-full">
+      {% for option in status_options %}
+        <li>
+          {# The radio is visually hidden; the whole row is the clickable label. #}
+          <label class="flex justify-between has-checked:bg-neutral has-checked:text-neutral-content has-focus-visible:outline-2">
+            <input type="radio" name="status" value="{{ option.value }}" class="sr-only"{% if option.checked %} checked{% endif %}>
+            <span>{{ option.label }}</span>
+            <span class="badge badge-sm badge-ghost" data-status-count="{{ option.value|default:'all' }}">{{ option.count }}</span>
+          </label>
+        </li>
+      {% endfor %}
+    </ul>
+  </fieldset>
+
+  <fieldset>
+    <legend class="text-xs font-semibold uppercase tracking-wide text-base-content/60 mb-2">Rating</legend>
+    <div class="space-y-1">
+      {% for option in rating_options %}
+        <label class="flex gap-2 items-center cursor-pointer text-sm">
+          <input type="radio" name="min_rating" value="{{ option.value }}" class="radio radio-xs radio-primary"{% if option.checked %} checked{% endif %}>
+          {{ option.label }}
+        </label>
+      {% endfor %}
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend class="text-xs font-semibold uppercase tracking-wide text-base-content/60 mb-2">Show</legend>
+    <div class="space-y-1">
+      {% for option in rated_options %}
+        <label class="flex gap-2 items-center cursor-pointer text-sm">
+          <input type="radio" name="rated" value="{{ option.value }}" class="radio radio-xs radio-primary"{% if option.checked %} checked{% endif %}>
+          {{ option.label }}
+        </label>
+      {% endfor %}
+    </div>
+  </fieldset>
+
+  {# A plain link without JavaScript; app.js turns it into "reset the form and re-run it". #}
+  <a href="{% url 'shelf:my_shelf' %}" class="btn btn-outline btn-sm" data-clear-filters>Clear all filters</a>
+</aside>

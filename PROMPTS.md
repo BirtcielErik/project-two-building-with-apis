@@ -28,6 +28,79 @@ Each entry has this shape:
     - **Deviations:** recommendations overridden, follow-up questions asked
     - **Sideways:** failures, wrong turns, and how they were caught
 
+## 2026-11-14 — Implemented Phase 5: Shelf browsing
+
+### Prompts
+1. `/implement @prd/one-more-chapter.md @plans/one-more-chapter.md Implement Phase 5`
+2. 1 and 2 *(TDD behaviors: nulls sort last in both directions; filters
+   combine while status counts cover the whole shelf. The third proposed
+   behavior, the Currently Reading strip hiding while filtering, was not
+   chosen)*
+3. make it pass *(RED test for behavior 1)*
+4. yes, move on to behavior 2
+5. make it pass *(RED test for behavior 2)*
+6. yes, continue with the rest of the phase
+7. When using the back button, the page displays the correct books, but
+   the status, radios, and drop down show their default states
+8. The clear all filters button on the sidebar and the clear filters
+   button when no items are shown need outlines to make it clear that
+   they are buttons
+9. The currently reading banner at the top can be displayed regardless of
+   filter or search - it is weird that it disappears and the page jumps
+   when you apply a filter
+10. The manual checks pass, finish the phase
+
+### Summary
+- **Outcome:** Built Phase 5 of the plan:
+  - Added `django-filter`. `shelf/filters.py` holds `ShelfEntryFilter`,
+    shared with the API in Phase 9: `q` (title or authors, ignoring
+    case), `status`, `min_rating` (1–5), `rated` (yes/no), and `ordering`
+    over title, author, rating, added, updated, and finished in both
+    directions. A `NullsLastOrderingFilter` puts empty ratings and
+    finished dates last, and every sort ends with newest-added then ID
+    so pagination is stable. Invalid values are reported by the
+    FilterSet; the website ignores them (the API will return 400).
+    `status_counts()` counts the whole shelf in one query.
+  - My Shelf: a sidebar with status (radio rows with whole-shelf counts),
+    minimum rating, rated/not rated, and Clear all filters; a live
+    search box (300ms debounce) and sort dropdown; "Showing 13–24 of 40"
+    with 12 per page and the shared pagination partial; a "no matches"
+    state with Clear filters. One GET form drives everything: HTMX swaps
+    only `#shelf-results`, pushes the URL, and cancels stale requests
+    (`hx-sync`). It also works as a plain form without JavaScript.
+  - `app.js`: blank fields are dropped from HTMX filter URLs, Clear
+    filters resets the form (keeping the sort) and re-runs it, and the
+    phone Filters button shows or hides the sidebar.
+  - TDD for both chosen behaviors, then normal tests for each filter,
+    every sort, invalid values, pagination and range, the strip, HTMX
+    partials, bookmarked URLs, empty states, and ownership: 193 tests
+    passing, Ruff clean.
+- **Deviations:**
+  - Picked 2 of the 3 proposed TDD behaviors (the strip rule was left
+    out, which turned out well since that rule was later dropped).
+  - The user changed user story 29: the Currently Reading strip now
+    always shows instead of hiding while filtering, because it made the
+    page jump. The PRD (story 29 and the My Shelf section) and Phase 5 of
+    the plan were updated to match, and the out-of-band strip swap was
+    removed.
+  - Both Clear filters buttons were restyled with outlines at the user's
+    request.
+- **Sideways:**
+  - The first version of the null-ordering filter overrode django-filter's
+    `get_ordering_value()` with a different signature; it was caught
+    before running and changed to use the built-in method.
+  - Two sort-by-updated test cases had wrong expectations (the test's
+    never-edited book has the oldest `updated_at`); the test, not the
+    code, was fixed.
+  - A Bash heredoc failed on quoting while adding tests; the tests were
+    added with the Edit tool instead.
+  - Manual testing found that the Back button showed the right books but
+    default filter controls: HTMX's history snapshot records the controls
+    as first loaded. Fixed with `hx-history="false"` so Back re-requests
+    the page from the server. The Search page had the same bug (an older
+    query in the search box) and got the same fix. Stale snapshots
+    already in the browser had to be cleared from `localStorage` once.
+
 ## 2026-11-14 — Implemented Phase 4: Save from search and list books on My Shelf
 
 ### Prompts

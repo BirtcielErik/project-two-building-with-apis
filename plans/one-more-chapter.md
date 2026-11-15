@@ -134,7 +134,7 @@ Add one `django-filter` FilterSet for shelf entries:
 - **Ordering**: a whitelist of title, author, rating, date added, date updated, and finished date, both directions, nulls last.
 - **Pagination**: 12 per page.
 
-My Shelf gains a sidebar with status filters and their counts, minimum rating, rated/unrated, and Clear all filters. The main column has a debounced live search box and a sort dropdown above the list, pagination with the current range, and a Currently Reading strip that hides while any filter or search is active. Every change swaps the results through HTMX and pushes a bookmarkable URL. On phones the sidebar sits behind a Filters button. When no books match, a Clear filters button appears.
+My Shelf gains a sidebar with status filters and their counts, minimum rating, rated/unrated, and Clear all filters. The main column has a debounced live search box and a sort dropdown above the list, pagination with the current range, and a Currently Reading strip that stays in place (showing every Currently Reading book) while filters and search change the list below it. Every change swaps the results through HTMX and pushes a bookmarkable URL. On phones the sidebar sits behind a Filters button. When no books match, a Clear filters button appears.
 
 ### Acceptance criteria
 
@@ -143,7 +143,7 @@ My Shelf gains a sidebar with status filters and their counts, minimum rating, r
 - [ ] Every sort option works in both directions, and null ratings and finished dates sort last.
 - [ ] The shelf pages at 12 per page and shows the range (for example "13–24 of 40").
 - [ ] A bookmarked filtered URL renders the same view as a full page.
-- [ ] The Currently Reading strip shows only when no filters or search are active.
+- [ ] The Currently Reading strip shows every Currently Reading book and stays in place when filters or search are applied.
 - [ ] When no books match, the "no matches" state appears with a Clear filters button.
 - [ ] Tests cover the FilterSet directly: each filter, each ordering, null ordering, and pagination size.
 

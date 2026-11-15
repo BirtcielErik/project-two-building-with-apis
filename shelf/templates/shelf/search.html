@@ -4,7 +4,8 @@
 
 {% block content %}
 {# hx-indicator is inherited: the form and the pagination links all light up the spinner. #}
-<div class="max-w-4xl mx-auto px-4 py-8 space-y-6" hx-indicator="#search-spinner">
+{# hx-history="false": Back re-requests the URL so the search box shows that URL's query. #}
+<div class="max-w-4xl mx-auto px-4 py-8 space-y-6" hx-indicator="#search-spinner" hx-history="false">
   <h1 class="text-3xl font-bold">Search</h1>
 
   {% comment %}

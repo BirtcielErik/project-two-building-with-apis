@@ -1,0 +1,26 @@
+{% comment %}
+  The results area of My Shelf: the "Showing 13–24 of 40" range, one page of
+  list rows, and pagination. HTMX requests receive only this template; full
+  page loads include it inside #shelf-results.
+{% endcomment %}
+{% url 'shelf:my_shelf' as shelf_url %}
+
+{% if page_obj.paginator.count %}
+  <div class="space-y-3">
+    <p class="text-sm text-base-content/60" data-range>
+      Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+    </p>
+    <ul class="divide-y divide-base-300 bg-base-200 rounded-box">
+      {% for entry in page_obj %}
+        {% include "shelf/partials/book_row.html" with book=entry.book %}
+      {% endfor %}
+    </ul>
+    {% include "partials/pagination.html" with base_url=shelf_url target="#shelf-results" %}
+  </div>
+{% else %}
+  <div class="text-center py-16 px-4 space-y-3 bg-base-200 rounded-box" data-no-matches>
+    <p class="text-4xl" aria-hidden="true">🔍</p>
+    <h2 class="font-semibold">No books match these filters.</h2>
+    <a href="{{ shelf_url }}" class="btn btn-outline btn-sm" data-clear-filters>Clear filters</a>
+  </div>
+{% endif %}

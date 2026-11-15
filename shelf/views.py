@@ -12,6 +12,14 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from shelf import openlibrary, saving
+from shelf.filters import (
+    MIN_RATING_CHOICES,
+    ORDERING_CHOICES,
+    PAGE_SIZE,
+    RATED_CHOICES,
+    ShelfEntryFilter,
+    status_counts,
+)
 from shelf.htmx import is_htmx, render_page_or_partial
 from shelf.models import ShelfEntry
 from shelf.pagination import page_links
@@ -31,13 +39,67 @@ def landing(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def my_shelf(request: HttpRequest) -> HttpResponse:
-    """Show the user's bookshelf, newest additions first.
+    """Show the user's bookshelf with search, filters, sorting, and pagination.
+
+    The URL parameters (``q``, ``status``, ``min_rating``, ``rated``,
+    ``ordering``, ``page``) go through the shared ``ShelfEntryFilter``, so a
+    bookmarked URL shows the same view. HTMX requests get only the results
+    area; the sidebar, search box, and Currently Reading strip stay in place.
 
     Everything comes from our own database, so the shelf works even when
     Open Library is down. An empty shelf shows a button to the Search page.
     """
-    entries = request.user.shelf_entries.select_related("book").order_by("-added_at")
-    return render(request, "shelf/my_shelf.html", {"entries": entries})
+    shelf = request.user.shelf_entries.select_related("book")
+    filterset = ShelfEntryFilter(request.GET, queryset=shelf)
+    # Invalid values (like min_rating=9) are dropped from cleaned_data, so they're ignored.
+    filterset.is_valid()
+    chosen = filterset.form.cleaned_data
+
+    paginator = Paginator(filterset.qs, PAGE_SIZE)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    # Counted over the whole shelf (not filterset.qs), so the sidebar always shows every status.
+    counts = status_counts(shelf)
+    shelf_total = sum(counts.values())
+
+    context = {
+        "page_obj": page_obj,
+        "page": page_obj.number,
+        "num_pages": paginator.num_pages,
+        "page_links": page_links(paginator, page_obj.number),
+        "previous_page": page_obj.previous_page_number() if page_obj.has_previous() else None,
+        "next_page": page_obj.next_page_number() if page_obj.has_next() else None,
+        "shelf_total": shelf_total,
+        "query": chosen.get("q") or "",
+        "status_options": _status_options(chosen.get("status") or "", counts, shelf_total),
+        "rating_options": _options(MIN_RATING_CHOICES, chosen.get("min_rating")),
+        "rated_options": _options(RATED_CHOICES, chosen.get("rated")),
+        "ordering_options": _options(ORDERING_CHOICES, (chosen.get("ordering") or [""])[0]),
+        # The strip always shows every Currently Reading book, whatever the filters.
+        "reading_now": shelf.filter(status=ShelfEntry.Status.READING),
+    }
+    return render_page_or_partial(
+        request, "shelf/my_shelf.html", "shelf/partials/shelf_results.html", context
+    )
+
+
+def _options(choices: list[tuple[str, str]], current: object) -> list[dict[str, object]]:
+    """Turn ``(value, label)`` choices into dicts that also say which one is selected.
+
+    ``current`` may be a number or ``None`` (from the form), so it's compared as text.
+    """
+    current_text = "" if current is None else str(current)
+    return [
+        {"value": value, "label": label, "checked": value == current_text}
+        for value, label in choices
+    ]
+
+
+def _status_options(current: str, counts: dict[str, int], total: int) -> list[dict[str, object]]:
+    """Return the sidebar's status choices ("All books" first), each with its book count."""
+    options = _options([("", "All books"), *ShelfEntry.Status.choices], current)
+    for option in options:
+        option["count"] = counts.get(option["value"], 0) if option["value"] else total
+    return options
 
 
 @login_required
